@@ -1,0 +1,25 @@
+<project>
+  <modelVersion>4.0.0</modelVersion>
+  <parent>
+    <groupId>ml.dmlc.mxnet</groupId>
+    <artifactId>mxnet-scala-parent</artifactId>
+    <version>0.1-SNAPSHOT</version>
+  </parent>
+
+  <groupId>ml.dmlc.mxnet</groupId>
+  <artifactId>mxnet-scala-core</artifactId>
+  <version>0.1-SNAPSHOT</version>
+  <name>MXNet Scala Wrapper - Core</name>
+
+  <build>
+    <plugins>
+      <plugin>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <configuration>
+          <source>1.8</source>
+          <target>1.8</target>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
+</project>

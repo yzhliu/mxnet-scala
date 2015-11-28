@@ -1,0 +1,89 @@
+<project>
+
+  <modelVersion>4.0.0</modelVersion>
+  <parent>
+    <groupId>ml.dmlc.mxnet</groupId>
+    <artifactId>mxnet-scala-native-parent</artifactId>
+    <version>0.1-SNAPSHOT</version>
+  </parent>
+
+  <groupId>ml.dmlc.mxnet</groupId>
+  <artifactId>mxnet-scala-native</artifactId>
+  <version>0.0.1-SNAPSHOT</version>
+  <name>MXNet scala native OSX-x86_64</name>
+  <url>http://maven.apache.org</url>
+
+  <packaging>so</packaging>
+
+  <dependencies>
+    <dependency>
+      <groupId>ml.dmlc.mxnet</groupId>
+      <artifactId>mxnet-scala-core</artifactId>
+      <version>0.1-SNAPSHOT</version>
+      <type>jar</type>
+      <scope>compile</scope>
+    </dependency>   
+  </dependencies>
+
+  <build>
+    <plugins>
+      <plugin>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <configuration>
+          <source>1.8</source>
+          <target>1.8</target>
+        </configuration>
+      </plugin>     
+
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>native-maven-plugin</artifactId>
+        <extensions>true</extensions>
+        <configuration>
+          <!--  trigger javah -->
+          <javahOS>darwin</javahOS>
+          <compilerProvider>generic-classic</compilerProvider>
+          <compilerExecutable>gcc</compilerExecutable>
+          <linkerExecutable>gcc</linkerExecutable>
+          <sources>
+            <source>
+              <directory>../src/main/native</directory>
+              <fileNames>
+                <fileName>jni_example.c</fileName>
+              </fileNames>
+            </source>
+          </sources>
+        </configuration>
+
+        <executions>
+          <execution>
+            <id>javah</id>
+            <phase>generate-sources</phase>
+            <configuration>
+              <javahOS>darwin</javahOS>
+              <javahProvider>default</javahProvider>
+              <javahOutputDirectory>${project.build.directory}/custom-javah</javahOutputDirectory>
+              <workingDirectory>${basedir}</workingDirectory>
+              <javahOutputFileName>nativeStuff.h</javahOutputFileName>
+              <javahClassNames>
+                <javahClassName>ml.dmlc.mxnet.jnitest.NativeStuff</javahClassName>
+              </javahClassNames>
+              <linkerMiddleOptions>
+                <linkerMiddleOption>-dynamiclib</linkerMiddleOption>
+                <linkerMiddleOption>-static-libgfortran</linkerMiddleOption>
+                <linkerMiddleOption>-static-libgcc</linkerMiddleOption>
+                <linkerMiddleOption>-framework JavaVM</linkerMiddleOption>
+                <linkerMiddleOption>-Wl,-dead_strip</linkerMiddleOption>
+                <linkerMiddleOption>-Wl,-exported_symbol,_Java_*</linkerMiddleOption>
+                <linkerMiddleOption>-Wl,-x</linkerMiddleOption>
+              </linkerMiddleOptions>
+            </configuration>
+            <goals>
+              <goal>javah</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
+</project>

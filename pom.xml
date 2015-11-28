@@ -1,0 +1,27 @@
+<project>
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>ml.dmlc.mxnet</groupId>
+  <artifactId>mxnet-scala-parent</artifactId>
+  <version>0.1-SNAPSHOT</version>
+  <properties>
+    <scala.version>2.10.4</scala.version>
+    <scala.binary.version>2.10</scala.binary.version>
+  </properties>
+
+  <packaging>pom</packaging>
+  <modules>
+    <module>core</module>
+    <module>native</module>
+  </modules>
+  <build>
+    <pluginManagement>
+      <plugins>
+        <plugin>
+          <groupId>org.codehaus.mojo</groupId>
+          <artifactId>native-maven-plugin</artifactId>
+          <version>1.0-alpha-7</version>
+        </plugin>
+      </plugins>
+    </pluginManagement>
+  </build>
+</project>
