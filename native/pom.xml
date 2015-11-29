@@ -8,7 +8,7 @@
   </parent>
 
   <artifactId>mxnet-scala-native-parent</artifactId>
-  <name>MXNet scala native parent</name>
+  <name>MXNet Scala Package - Native Parent</name>
   <packaging>pom</packaging>
 
   <profiles>

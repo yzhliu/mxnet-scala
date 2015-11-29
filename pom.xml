@@ -3,6 +3,7 @@
   <groupId>ml.dmlc.mxnet</groupId>
   <artifactId>mxnet-scala-parent</artifactId>
   <version>0.1-SNAPSHOT</version>
+  <name>MXNet Scala Package - Parent</name>
   <properties>
     <scala.version>2.10.4</scala.version>
     <scala.binary.version>2.10</scala.binary.version>

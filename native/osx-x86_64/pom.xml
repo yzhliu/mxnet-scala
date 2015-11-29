@@ -8,12 +8,12 @@
   </parent>
 
   <groupId>ml.dmlc.mxnet</groupId>
-  <artifactId>mxnet-scala-native</artifactId>
+  <artifactId>libmxnet-scala</artifactId>
   <version>0.0.1-SNAPSHOT</version>
-  <name>MXNet scala native OSX-x86_64</name>
+  <name>MXNet Scala Package - Native OSX-x86_64</name>
   <url>http://maven.apache.org</url>
 
-  <packaging>so</packaging>
+  <packaging>jnilib</packaging>
 
   <dependencies>
     <dependency>
@@ -53,6 +53,13 @@
               </fileNames>
             </source>
           </sources>
+          <linkerMiddleOptions>
+            <linkerMiddleOption>-dynamiclib</linkerMiddleOption>
+            <linkerMiddleOption>-framework JavaVM</linkerMiddleOption>
+            <linkerMiddleOption>-Wl,-dead_strip</linkerMiddleOption>
+            <linkerMiddleOption>-Wl,-exported_symbol,_Java_*</linkerMiddleOption>
+            <linkerMiddleOption>-Wl,-x</linkerMiddleOption>
+          </linkerMiddleOptions>
         </configuration>
 
         <executions>
@@ -68,15 +75,6 @@
               <javahClassNames>
                 <javahClassName>ml.dmlc.mxnet.jnitest.NativeStuff</javahClassName>
               </javahClassNames>
-              <linkerMiddleOptions>
-                <linkerMiddleOption>-dynamiclib</linkerMiddleOption>
-                <linkerMiddleOption>-static-libgfortran</linkerMiddleOption>
-                <linkerMiddleOption>-static-libgcc</linkerMiddleOption>
-                <linkerMiddleOption>-framework JavaVM</linkerMiddleOption>
-                <linkerMiddleOption>-Wl,-dead_strip</linkerMiddleOption>
-                <linkerMiddleOption>-Wl,-exported_symbol,_Java_*</linkerMiddleOption>
-                <linkerMiddleOption>-Wl,-x</linkerMiddleOption>
-              </linkerMiddleOptions>
             </configuration>
             <goals>
               <goal>javah</goal>

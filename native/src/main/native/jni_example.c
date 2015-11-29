@@ -8,7 +8,3 @@ JNIEXPORT void JNICALL Java_ml_dmlc_mxnet_jnitest_NativeStuff_helloNative
 {
       puts("Hello from C!");
 }
-
-int main() {
-  return 0;
-}

@@ -9,7 +9,7 @@
   <groupId>ml.dmlc.mxnet</groupId>
   <artifactId>mxnet-scala-core</artifactId>
   <version>0.1-SNAPSHOT</version>
-  <name>MXNet Scala Wrapper - Core</name>
+  <name>MXNet Scala Package - Core</name>
 
   <build>
     <plugins>
