@@ -61,4 +61,13 @@
       </plugins>
     </pluginManagement>
   </build>
+  <dependencyManagement>
+    <dependencies>
+      <dependency>
+        <groupId>org.scalanlp</groupId>
+        <artifactId>breeze_${scala.binary.version}</artifactId>
+        <version>0.11.2</version>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
 </project>
