@@ -40,8 +40,8 @@
           <!--  trigger javah -->
           <javahOS>darwin</javahOS>
           <compilerProvider>generic-classic</compilerProvider>
-          <compilerExecutable>gcc</compilerExecutable>
-          <linkerExecutable>gcc</linkerExecutable>
+          <compilerExecutable>clang++</compilerExecutable>
+          <linkerExecutable>clang++</linkerExecutable>
           <sources>
             <source>
               <directory>../src/main/native</directory>
@@ -50,9 +50,20 @@
               </fileNames>
             </source>
           </sources>
+          <!-- TODO -->
+          <compilerEndOptions>
+            <compilerEndOption>-I/Users/lewis/Workspace/source-codes/dmlc/bak/mxnet/include/mxnet</compilerEndOption>
+            <compilerEndOption>-fPIC</compilerEndOption>
+          </compilerEndOptions>
           <linkerMiddleOptions>
             <linkerMiddleOption>-dynamiclib</linkerMiddleOption>
+            <linkerMiddleOption>/Users/lewis/Workspace/source-codes/dmlc/bak/mxnet/lib/libmxnet.a</linkerMiddleOption>
+            <!--
+            <linkerMiddleOption>-L/Users/lewis/Workspace/source-codes/dmlc/mxnet/lib</linkerMiddleOption>
+            <linkerMiddleOption>-lmxnet</linkerMiddleOption>
+            -->
             <linkerMiddleOption>-framework JavaVM</linkerMiddleOption>
+            <linkerMiddleOption>-framework Accelerate</linkerMiddleOption>
             <linkerMiddleOption>-Wl,-dead_strip</linkerMiddleOption>
             <linkerMiddleOption>-Wl,-exported_symbol,_Java_*</linkerMiddleOption>
             <linkerMiddleOption>-Wl,-x</linkerMiddleOption>
@@ -71,6 +82,8 @@
               <javahOutputFileName>nativeStuff.h</javahOutputFileName>
               <javahClassNames>
                 <javahClassName>ml.dmlc.mxnet.jnitest.NativeStuff</javahClassName>
+                <javahClassName>ml.dmlc.mxnet.jnitest.ScalaNativeStuff</javahClassName>
+                <javahClassName>ml.dmlc.mxnet.LibInfo</javahClassName>
               </javahClassNames>
             </configuration>
             <goals>

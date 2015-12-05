@@ -5,6 +5,28 @@ import ml.dmlc.mxnet.Base._
 object NDArray {
   def _plus(array1: NDArray, array2: NDArray, out: NDArray = null): NDArray = ???
   def _plusScalar(array: NDArray, number: Double, out: NDArray = null): NDArray = ???
+
+  /**
+    Return a new empty handle.
+
+    Empty handle can be used to hold result
+
+    Returns
+    -------
+    a new empty ndarray handle
+  */
+  def _new_empty_handle(): NDArrayHandle = {
+    // TODO
+    var hdl: NDArrayHandle = new NDArrayHandle
+    checkCall(_LIB.mxNDArrayCreateNone(hdl))
+    hdl
+  }
+
+  def main(args: Array[String]): Unit = {
+    System.loadLibrary("mxnet-scala")
+    val ndArrayHandle: NDArrayHandle = _new_empty_handle()
+    println(ndArrayHandle.handler)
+  }
 }
 
 /**
@@ -12,10 +34,11 @@ object NDArray {
  * NDArray is basic ndarray/Tensor like data structure in mxnet.
  */
 class NDArray(val handle: NDArrayHandle, val writable: Boolean = true) {
+  /*
   override def finalize() = {
-    _LIB.mxNDArrayFree(handle)
     checkCall(_LIB.mxNDArrayFree(handle))
   }
+  */
 
   def +(other: NDArray): NDArray = {
     NDArray._plus(this, other)

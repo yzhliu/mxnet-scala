@@ -18,7 +18,9 @@ RtcHandle = ctypes.c_void_p
 
 object Base {
   type mx_uint = Int
-  class NDArrayHandle
+  class NDArrayHandle {
+    var handler: Long = 10
+  }
 
   // TODO
   System.loadLibrary("mxnet-scala")
