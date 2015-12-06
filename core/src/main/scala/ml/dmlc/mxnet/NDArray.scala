@@ -16,16 +16,14 @@ object NDArray {
     a new empty ndarray handle
   */
   def _new_empty_handle(): NDArrayHandle = {
-    // TODO
     var hdl: NDArrayHandle = new NDArrayHandle
     checkCall(_LIB.mxNDArrayCreateNone(hdl))
     hdl
   }
 
   def main(args: Array[String]): Unit = {
-    System.loadLibrary("mxnet-scala")
     val ndArrayHandle: NDArrayHandle = _new_empty_handle()
-    println(ndArrayHandle.handler)
+    println(ndArrayHandle.ptr64)
   }
 }
 
@@ -34,11 +32,9 @@ object NDArray {
  * NDArray is basic ndarray/Tensor like data structure in mxnet.
  */
 class NDArray(val handle: NDArrayHandle, val writable: Boolean = true) {
-  /*
   override def finalize() = {
     checkCall(_LIB.mxNDArrayFree(handle))
   }
-  */
 
   def +(other: NDArray): NDArray = {
     NDArray._plus(this, other)

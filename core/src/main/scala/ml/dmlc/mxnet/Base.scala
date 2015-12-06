@@ -19,7 +19,7 @@ RtcHandle = ctypes.c_void_p
 object Base {
   type mx_uint = Int
   class NDArrayHandle {
-    var handler: Long = 10
+    var ptr64: Long = 0
   }
 
   // TODO

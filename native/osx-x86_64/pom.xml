@@ -46,18 +46,17 @@
             <source>
               <directory>../src/main/native</directory>
               <fileNames>
-                <fileName>jni_example.c</fileName>
+                <fileName>ml_dmlc_mxnet_native_c_api.c</fileName>
               </fileNames>
             </source>
           </sources>
-          <!-- TODO -->
           <compilerEndOptions>
-            <compilerEndOption>-I/Users/lewis/Workspace/source-codes/dmlc/bak/mxnet/include/mxnet</compilerEndOption>
+            <compilerEndOption>-I/Users/lewis/Workspace/source-codes/dmlc/mxnet/include/mxnet</compilerEndOption>
             <compilerEndOption>-fPIC</compilerEndOption>
           </compilerEndOptions>
           <linkerMiddleOptions>
             <linkerMiddleOption>-dynamiclib</linkerMiddleOption>
-            <linkerMiddleOption>/Users/lewis/Workspace/source-codes/dmlc/bak/mxnet/lib/libmxnet.a</linkerMiddleOption>
+            <linkerMiddleOption>/Users/lewis/Workspace/source-codes/dmlc/mxnet/lib/libmxnet.a</linkerMiddleOption>
             <!--
             <linkerMiddleOption>-L/Users/lewis/Workspace/source-codes/dmlc/mxnet/lib</linkerMiddleOption>
             <linkerMiddleOption>-lmxnet</linkerMiddleOption>
@@ -79,10 +78,8 @@
               <javahProvider>default</javahProvider>
               <javahOutputDirectory>${project.build.directory}/custom-javah</javahOutputDirectory>
               <workingDirectory>${basedir}</workingDirectory>
-              <javahOutputFileName>nativeStuff.h</javahOutputFileName>
+              <javahOutputFileName>ml_dmlc_mxnet_native_c_api.h</javahOutputFileName>
               <javahClassNames>
-                <javahClassName>ml.dmlc.mxnet.jnitest.NativeStuff</javahClassName>
-                <javahClassName>ml.dmlc.mxnet.jnitest.ScalaNativeStuff</javahClassName>
                 <javahClassName>ml.dmlc.mxnet.LibInfo</javahClassName>
               </javahClassNames>
             </configuration>
