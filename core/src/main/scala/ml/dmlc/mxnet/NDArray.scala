@@ -5,6 +5,14 @@ import ml.dmlc.mxnet.Base._
 object NDArray {
   def _plus(array1: NDArray, array2: NDArray, out: NDArray = null): NDArray = ???
   def _plusScalar(array: NDArray, number: Double, out: NDArray = null): NDArray = ???
+  def _minus(array1: NDArray, array2: NDArray, out: NDArray = null): NDArray = ???
+  def _minusScalar(array: NDArray, number: Double, out: NDArray = null): NDArray = ???
+  def _rminusScalar(array: NDArray, number: Double, out: NDArray = null): NDArray = ???
+  def _mul(array1: NDArray, array2: NDArray, out: NDArray = null): NDArray = ???
+  def _mulScalar(array: NDArray, number: Double, out: NDArray = null): NDArray = ???
+  def _div(array1: NDArray, array2: NDArray, out: NDArray = null): NDArray = ???
+  def _divScalar(array: NDArray, number: Double, out: NDArray = null): NDArray = ???
+  def _rdivScalar(array: NDArray, number: Double, out: NDArray = null): NDArray = ???
 
   /**
     Return a new empty handle.
@@ -48,14 +56,84 @@ class NDArray(val handle: NDArrayHandle, val writable: Boolean = true) {
     if (!writable) {
       throw new IllegalArgumentException("trying to add to a readonly NDArray")
     }
-    NDArray._plus(this, other, out = this)
+    NDArray._plus(this, other, out=this)
   }
 
   def +=(other: Double): NDArray = {
     if (!writable) {
       throw new IllegalArgumentException("trying to add to a readonly NDArray")
     }
-    NDArray._plusScalar(this, other, out = this)
+    NDArray._plusScalar(this, other, out=this)
+  }
+
+  def -(other: NDArray): NDArray = {
+    NDArray._minus(this, other)
+  }
+
+  def -(other: Double): NDArray = {
+    NDArray._minusScalar(this, other)
+  }
+
+  def -=(other: NDArray): NDArray = {
+    if (!writable) {
+      throw new IllegalArgumentException("trying to subtract from a readonly NDArray")
+    }
+    NDArray._minus(this, other, out=this)
+  }
+
+  def -=(other: Double): NDArray = {
+    if (!writable) {
+      throw new IllegalArgumentException("trying to subtract from a readonly NDArray")
+    }
+    NDArray._minusScalar(this, other, out=this)
+  }
+
+  def *(other: NDArray) = {
+    NDArray._mul(this, other)
+  }
+
+  def *(other: Double) = {
+    NDArray._mulScalar(this, other)
+  }
+
+  def unary_-(): NDArray = {
+    NDArray._mulScalar(this, -1.0)
+  }
+
+  def *=(other: NDArray) = {
+    if (!writable) {
+      throw new IllegalArgumentException("trying to multiply to a readonly NDArray")
+    }
+    NDArray._mul(this, other, out=this)
+  }
+
+  def *=(other: Double) = {
+    if (!writable) {
+      throw new IllegalArgumentException("trying to multiply to a readonly NDArray")
+    }
+    NDArray._mulScalar(this, other, out=this)
+  }
+
+  def /(other: NDArray): NDArray = {
+    NDArray._div(this, other)
+  }
+
+  def /(other: Double): NDArray = {
+    NDArray._divScalar(this, other)
+  }
+
+  def /=(other: NDArray): NDArray = {
+    if (!writable) {
+      throw new IllegalArgumentException("trying to divide from a readonly NDArray")
+    }
+    NDArray._div(this, other, out=this)
+  }
+
+  def /=(other: Double): NDArray = {
+    if (!writable) {
+      throw new IllegalArgumentException("trying to divide from a readonly NDArray")
+    }
+    NDArray._divScalar(this, other, out=this)
   }
 
   /**
@@ -98,5 +176,18 @@ object NDArrayConversions {
 class NDArrayConversions[@specialized(Int, Float, Double) V](val value: V) {
   def +(other: NDArray): NDArray = {
     other + value.asInstanceOf[Double]
+  }
+
+  def -(other: NDArray): NDArray = {
+    other - value.asInstanceOf[Double]
+    NDArray._rminusScalar(other, value.asInstanceOf[Double])
+  }
+
+  def *(other: NDArray): NDArray = {
+    other * value.asInstanceOf[Double]
+  }
+
+  def /(other: NDArray): NDArray = {
+    NDArray._rdivScalar(other, value.asInstanceOf[Double])
   }
 }
