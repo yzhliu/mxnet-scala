@@ -9,10 +9,11 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxNDArrayCreateNone(JNIEnv *en
   int ret = MXNDArrayCreateNone(out);
   jclass ndClass = env->GetObjectClass(ndArrayHandle);
   jfieldID ptr64 = env->GetFieldID(ndClass, "ptr64", "J");
-  env->SetIntField(ndArrayHandle, ptr64, (long)out);
+  env->SetLongField(ndArrayHandle, ptr64, (long)out);
   return ret;
 }
 
+// TODO: move to c_api_error.c
 JNIEXPORT jstring JNICALL Java_ml_dmlc_mxnet_LibInfo_mxGetLastError(JNIEnv * env, jobject obj) {
   char *tmpstr = "MXNetError";
   jstring rtstr = env->NewStringUTF(tmpstr);
