@@ -51,12 +51,12 @@
             </source>
           </sources>
           <compilerEndOptions>
-            <compilerEndOption>-I/Users/lewis/Workspace/source-codes/dmlc/mxnet/include/mxnet</compilerEndOption>
+            <compilerEndOption>-I../../../mxnet/include/mxnet</compilerEndOption>
             <compilerEndOption>-fPIC</compilerEndOption>
           </compilerEndOptions>
           <linkerMiddleOptions>
             <linkerMiddleOption>-dynamiclib</linkerMiddleOption>
-            <linkerMiddleOption>/Users/lewis/Workspace/source-codes/dmlc/mxnet/lib/libmxnet.a</linkerMiddleOption>
+            <linkerMiddleOption>../../../mxnet/lib/libmxnet.a</linkerMiddleOption>
             <!--
             <linkerMiddleOption>-L/Users/lewis/Workspace/source-codes/dmlc/mxnet/lib</linkerMiddleOption>
             <linkerMiddleOption>-lmxnet</linkerMiddleOption>
