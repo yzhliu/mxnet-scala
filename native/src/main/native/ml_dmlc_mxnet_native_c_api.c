@@ -13,6 +13,23 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxNDArrayCreateNone(JNIEnv *en
   return ret;
 }
 
+JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxNDArrayCreate(JNIEnv *env, jobject obj,
+                                                              jintArray shape,
+                                                              jint ndim,
+                                                              jint devType,
+                                                              jint devId,
+                                                              jint delayAlloc,
+                                                              jobject ndArrayHandle) {
+  jint *shapeArr = env->GetIntArrayElements(shape, NULL);
+  NDArrayHandle *out;
+  int ret = MXNDArrayCreate((mx_uint *)shapeArr, (mx_uint)ndim, devType, devId, delayAlloc, out);
+  env->ReleaseIntArrayElements(shape, shapeArr, 0);
+  jclass ndClass = env->GetObjectClass(ndArrayHandle);
+  jfieldID ptr64 = env->GetFieldID(ndClass, "ptr64", "J");
+  env->SetLongField(ndArrayHandle, ptr64, (long)out);
+  return ret;
+}
+
 // TODO: move to c_api_error.c
 JNIEXPORT jstring JNICALL Java_ml_dmlc_mxnet_LibInfo_mxGetLastError(JNIEnv * env, jobject obj) {
   char *tmpstr = "MXNetError";

@@ -24,14 +24,41 @@ object NDArray {
     a new empty ndarray handle
   */
   def _new_empty_handle(): NDArrayHandle = {
-    var hdl: NDArrayHandle = new NDArrayHandle
+    val hdl: NDArrayHandle = new NDArrayHandle
     checkCall(_LIB.mxNDArrayCreateNone(hdl))
     hdl
   }
 
+  /*
+    Return a new handle with specified shape and context.
+
+    Empty handle is only used to hold results
+
+    Returns
+    -------
+    a new empty ndarray handle
+  */
+  def _new_alloc_handle(shape: Vector[Int], ctx: Context, delayAlloc: Boolean): NDArrayHandle = {
+    val hdl = new NDArrayHandle
+    checkCall(_LIB.mxNDArrayCreate(
+      shape.toArray,
+      shape.size,
+      ctx.deviceTypeid,
+      ctx.deviceId,
+      if (delayAlloc) 1 else 0,
+      hdl))
+    hdl
+  }
+
   def main(args: Array[String]): Unit = {
-    val ndArrayHandle: NDArrayHandle = _new_empty_handle()
-    println(ndArrayHandle.ptr64)
+    println("NDArray (empty) address:")
+    val ndArrayEmpty: NDArrayHandle = _new_empty_handle()
+    println(ndArrayEmpty.ptr64)
+
+    println("NDArray (cpu) address:")
+    val ctx = new Context("cpu", 0)
+    val ndArrayCpu = _new_alloc_handle(Vector(2, 1), ctx, false)
+    println(ndArrayCpu.ptr64)
   }
 }
 
