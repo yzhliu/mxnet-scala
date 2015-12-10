@@ -8,8 +8,8 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxNDArrayCreateNone(JNIEnv *en
   NDArrayHandle *out;
   int ret = MXNDArrayCreateNone(out);
   jclass ndClass = env->GetObjectClass(ndArrayHandle);
-  jfieldID ptr64 = env->GetFieldID(ndClass, "ptr64", "J");
-  env->SetLongField(ndArrayHandle, ptr64, (long)out);
+  jfieldID ptr = env->GetFieldID(ndClass, "value", "J");
+  env->SetLongField(ndArrayHandle, ptr, (long)out);
   return ret;
 }
 
@@ -25,8 +25,8 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxNDArrayCreate(JNIEnv *env, j
   int ret = MXNDArrayCreate((mx_uint *)shapeArr, (mx_uint)ndim, devType, devId, delayAlloc, out);
   env->ReleaseIntArrayElements(shape, shapeArr, 0);
   jclass ndClass = env->GetObjectClass(ndArrayHandle);
-  jfieldID ptr64 = env->GetFieldID(ndClass, "ptr64", "J");
-  env->SetLongField(ndArrayHandle, ptr64, (long)out);
+  jfieldID ptr = env->GetFieldID(ndClass, "value", "J");
+  env->SetLongField(ndArrayHandle, ptr, (long)out);
   return ret;
 }
 
@@ -36,9 +36,8 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxNDArrayWaitAll(JNIEnv *env, 
 
 JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxListFunctions(JNIEnv *env, jobject obj, jobject functions) {
   // Base.FunctionHandle.constructor
-  jclass fhClass = env->FindClass("ml/dmlc/mxnet/Base$FunctionHandle");
+  jclass fhClass = env->FindClass("ml/dmlc/mxnet/Base$RefLong");
   jmethodID fhConstructor = env->GetMethodID(fhClass,"<init>","(J)V");
-  jfieldID fhClassPtr64 = env->GetFieldID(fhClass, "ptr64", "J");
 
   // scala.collection.mutable.ListBuffer append method
   jclass listClass = env->FindClass("scala/collection/mutable/ListBuffer");
@@ -54,6 +53,78 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxListFunctions(JNIEnv *env, j
     jobject fhObj = env->NewObject(fhClass, fhConstructor, (long)fhAddr);
     env->CallObjectMethod(functions, listAppend, fhObj);
   }
+  return ret;
+}
+
+JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxFuncDescribe(JNIEnv *env, jobject obj,
+                                                              jobject funcHandle,
+                                                              jobject nUsedVars,
+                                                              jobject nScalars,
+                                                              jobject nMutateVars,
+                                                              jobject typeMask) {
+  jclass refLongClass = env->FindClass("ml/dmlc/mxnet/Base$RefLong");
+  jfieldID refLongFid = env->GetFieldID(refLongClass, "value", "J");
+  jlong funcPtr = env->GetLongField(funcHandle, refLongFid);
+
+  mx_uint numUseVars;
+  mx_uint numScalars;
+  mx_uint numMutateVars;
+  int type;
+  int ret = MXFuncDescribe((FunctionHandle)funcPtr, &numUseVars,
+                            &numScalars, &numMutateVars, &type);
+
+  jclass refIntClass = env->FindClass("ml/dmlc/mxnet/Base$RefInt");
+  jfieldID value = env->GetFieldID(refIntClass, "value", "I");
+  env->SetIntField(nUsedVars, value, (jint)numUseVars);
+  env->SetIntField(nScalars, value, (jint)numScalars);
+  env->SetIntField(nMutateVars, value, (jint)numMutateVars);
+  env->SetIntField(typeMask, value, (jint)type);
+
+  return ret;
+}
+
+JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxFuncGetInfo(JNIEnv *env, jobject obj,
+                                                              jobject funcHandle,
+                                                              jobject name,
+                                                              jobject desc,
+                                                              jobject numArgs,
+                                                              jobject argNames,
+                                                              jobject argTypes,
+                                                              jobject argDescs) {
+  jclass refLongClass = env->FindClass("ml/dmlc/mxnet/Base$RefLong");
+  jfieldID refLongFid = env->GetFieldID(refLongClass, "value", "J");
+  jlong funcPtr = env->GetLongField(funcHandle, refLongFid);
+
+  const char *cName;
+  const char *cDesc;
+  mx_uint cNumArgs;
+  const char **cArgNames;
+  const char **cArgTypes;
+  const char **cArgDescs;
+  int ret = MXFuncGetInfo((FunctionHandle)funcPtr,
+                          &cName, &cDesc, &cNumArgs,
+                          &cArgNames, &cArgTypes, &cArgDescs);
+
+  jclass refIntClass = env->FindClass("ml/dmlc/mxnet/Base$RefInt");
+  jfieldID valueInt = env->GetFieldID(refIntClass, "value", "I");
+
+  jclass refStringClass = env->FindClass("ml/dmlc/mxnet/Base$RefString");
+  jfieldID valueStr = env->GetFieldID(refStringClass, "value", "Ljava/lang/String;");
+
+  // scala.collection.mutable.ListBuffer append method
+  jclass listClass = env->FindClass("scala/collection/mutable/ListBuffer");
+  jmethodID listAppend = env->GetMethodID(listClass, "$plus$eq",
+      "(Ljava/lang/Object;)Lscala/collection/mutable/ListBuffer;");
+
+  env->SetObjectField(name, valueStr, env->NewStringUTF(cName));
+  env->SetObjectField(desc, valueStr, env->NewStringUTF(cDesc));
+  env->SetIntField(numArgs, valueInt, (jint)cNumArgs);
+  for (int i = 0; i < cNumArgs; ++i) {
+    env->CallObjectMethod(argNames, listAppend, env->NewStringUTF(cArgNames[i]));
+    env->CallObjectMethod(argTypes, listAppend, env->NewStringUTF(cArgTypes[i]));
+    env->CallObjectMethod(argDescs, listAppend, env->NewStringUTF(cArgDescs[i]));
+  }
+
   return ret;
 }
 

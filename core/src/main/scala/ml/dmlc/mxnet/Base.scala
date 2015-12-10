@@ -17,9 +17,13 @@ RtcHandle = ctypes.c_void_p
 */
 
 object Base {
-  type mx_uint = Int
-  class NDArrayHandle(val ptr64: Long = 0)
-  class FunctionHandle(val ptr64: Long = 0)
+  class RefInt(val value: Int = 0)
+  class RefLong(val value: Long = 0)
+  class RefString(val value: String = null)
+
+  type MXUintRef = RefInt
+  type NDArrayHandle = RefLong
+  type FunctionHandle = RefLong
 
   // TODO
   System.loadLibrary("mxnet-scala")
@@ -40,6 +44,20 @@ object Base {
     if (ret != 0) {
       throw new MXNetError(_LIB.mxGetLastError())
     }
+  }
+
+  // Convert ctypes returned doc string information into parameters docstring.
+  def ctypes2docstring(
+      argNames: Seq[String],
+      argTypes: Seq[String],
+      argDescs: Seq[String]): String = {
+
+    val params =
+      (argNames zip argTypes zip argDescs).map { case ((argName, argType), argDesc) =>
+        val desc = if (argDesc.isEmpty) "" else s"\n$argDesc"
+        s"$argName : $argType$desc"
+      }
+    s"Parameters\n----------\n${params.mkString("\n")}\n"
   }
 }
 

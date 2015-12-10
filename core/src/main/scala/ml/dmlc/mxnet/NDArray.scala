@@ -25,7 +25,7 @@ object NDArray {
     -------
     a new empty ndarray handle
   */
-  def _new_empty_handle(): NDArrayHandle = {
+  def _newEmptyHandle(): NDArrayHandle = {
     val hdl: NDArrayHandle = new NDArrayHandle
     checkCall(_LIB.mxNDArrayCreateNone(hdl))
     hdl
@@ -40,7 +40,7 @@ object NDArray {
     -------
     a new empty ndarray handle
   */
-  def _new_alloc_handle(shape: Vector[Int], ctx: Context, delayAlloc: Boolean): NDArrayHandle = {
+  def _newAllocHandle(shape: Vector[Int], ctx: Context, delayAlloc: Boolean): NDArrayHandle = {
     val hdl = new NDArrayHandle
     checkCall(_LIB.mxNDArrayCreate(
       shape.toArray,
@@ -61,38 +61,63 @@ object NDArray {
     checkCall(_LIB.mxNDArrayWaitAll())
   }
 
+  // Create a NDArray function from the FunctionHandle.
+  def _makeNdarrayFunction(handle: FunctionHandle): Unit = {
+    val NDARRAY_ARG_BEFORE_SCALAR = 1
+    val ACCEPT_EMPTY_MUTATE_TARGET = 1 << 2 // Get the property of NDArray
+    val nUsedVars = new MXUintRef
+    val nScalars = new MXUintRef
+    val nMutateVars = new MXUintRef
+    val typeMask = new RefInt
+    checkCall(_LIB.mxFuncDescribe(handle, nUsedVars, nScalars, nMutateVars, typeMask))
+    val acceptEmptyMutate = (typeMask.value & ACCEPT_EMPTY_MUTATE_TARGET) != 0
+    // infer type of the function
+    /* TODO
+    if ((typeMask.value & NDARRAY_ARG_BEFORE_SCALAR) != 0) {
+      scalar_range = range(n_used_vars, n_used_vars + n_scalars)
+      use_vars_range = range(0, n_used_vars)
+    } else {
+      scalar_range = range(0, n_scalars)
+      use_vars_range = range(n_scalars, n_used_vars + n_scalars)
+    }
+    */
+    // Get the information from the function
+    val name = new RefString
+    val desc = new RefString
+    val numArgs = new MXUintRef
+    val argNames = ListBuffer[String]()
+    val argTypes = ListBuffer[String]()
+    val argDescs = ListBuffer[String]()
+
+    checkCall(_LIB.mxFuncGetInfo(
+      handle, name, desc, numArgs, argNames, argTypes, argDescs))
+    val paramStr = ctypes2docstring(argNames, argTypes, argDescs)
+    val docStr = s"${name.value}\n${desc.value}\n\n$paramStr\n"
+    println(docStr)
+  }
+
   // List and add all the ndarray functions to current module.
-  def _init_ndarray_module(): Unit = {
-    val functions: ListBuffer[FunctionHandle] = ListBuffer()
+  def _initNdarrayModule(): Unit = {
+    val functions = ListBuffer[FunctionHandle]()
     checkCall(_LIB.mxListFunctions(functions))
 
-    println("Functions: ")
-    println(functions.length)
-    functions.foreach(function => println(function.ptr64))
-
-    /*
-    module_obj = sys.modules[__name__]
-    for i in range(size.value):
-      hdl = FunctionHandle(plist[i])
-    function = _make_ndarray_function(hdl)#if function name starts with underscore, register as static method of NDArray
-    if function.__name__.startswith('_'):
-      setattr (NDArray, function.__name__, staticmethod(function))
-    else:
-      setattr(module_obj, function.__name__, function)
-      */
+    functions.foreach(hdl => {
+      val function = _makeNdarrayFunction(hdl)
+    })
   }
 
   def main(args: Array[String]): Unit = {
     println("NDArray (empty) address:")
-    val ndArrayEmpty: NDArrayHandle = _new_empty_handle()
-    println(ndArrayEmpty.ptr64)
+    val ndArrayEmpty: NDArrayHandle = _newEmptyHandle()
+    println(ndArrayEmpty.value)
 
     println("NDArray (cpu) address:")
     val ctx = new Context("cpu", 0)
-    val ndArrayCpu = _new_alloc_handle(Vector(2, 1), ctx, false)
-    println(ndArrayCpu.ptr64)
+    val ndArrayCpu = _newAllocHandle(Vector(2, 1), ctx, false)
+    println(ndArrayCpu.value)
 
-    _init_ndarray_module()
+    println("Get Ndarray functions: ")
+    _initNdarrayModule()
   }
 }
 
