@@ -2,6 +2,8 @@ package ml.dmlc.mxnet
 
 import ml.dmlc.mxnet.Base._
 
+import scala.collection.mutable.ListBuffer
+
 object NDArray {
   def _plus(array1: NDArray, array2: NDArray, out: NDArray = null): NDArray = ???
   def _plusScalar(array: NDArray, number: Double, out: NDArray = null): NDArray = ???
@@ -29,7 +31,7 @@ object NDArray {
     hdl
   }
 
-  /*
+  /**
     Return a new handle with specified shape and context.
 
     Empty handle is only used to hold results
@@ -50,6 +52,36 @@ object NDArray {
     hdl
   }
 
+  /**
+    Wait all async operation to finish in MXNet
+
+    This function is used for benchmark only
+  */
+  def waitall(): Unit = {
+    checkCall(_LIB.mxNDArrayWaitAll())
+  }
+
+  // List and add all the ndarray functions to current module.
+  def _init_ndarray_module(): Unit = {
+    val functions: ListBuffer[FunctionHandle] = ListBuffer()
+    checkCall(_LIB.mxListFunctions(functions))
+
+    println("Functions: ")
+    println(functions.length)
+    functions.foreach(function => println(function.ptr64))
+
+    /*
+    module_obj = sys.modules[__name__]
+    for i in range(size.value):
+      hdl = FunctionHandle(plist[i])
+    function = _make_ndarray_function(hdl)#if function name starts with underscore, register as static method of NDArray
+    if function.__name__.startswith('_'):
+      setattr (NDArray, function.__name__, staticmethod(function))
+    else:
+      setattr(module_obj, function.__name__, function)
+      */
+  }
+
   def main(args: Array[String]): Unit = {
     println("NDArray (empty) address:")
     val ndArrayEmpty: NDArrayHandle = _new_empty_handle()
@@ -59,6 +91,8 @@ object NDArray {
     val ctx = new Context("cpu", 0)
     val ndArrayCpu = _new_alloc_handle(Vector(2, 1), ctx, false)
     println(ndArrayCpu.ptr64)
+
+    _init_ndarray_module()
   }
 }
 

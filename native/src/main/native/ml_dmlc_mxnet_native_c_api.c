@@ -30,6 +30,33 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxNDArrayCreate(JNIEnv *env, j
   return ret;
 }
 
+JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxNDArrayWaitAll(JNIEnv *env, jobject obj) {
+  return MXNDArrayWaitAll();
+}
+
+JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxListFunctions(JNIEnv *env, jobject obj, jobject functions) {
+  // Base.FunctionHandle.constructor
+  jclass fhClass = env->FindClass("ml/dmlc/mxnet/Base$FunctionHandle");
+  jmethodID fhConstructor = env->GetMethodID(fhClass,"<init>","(J)V");
+  jfieldID fhClassPtr64 = env->GetFieldID(fhClass, "ptr64", "J");
+
+  // scala.collection.mutable.ListBuffer append method
+  jclass listClass = env->FindClass("scala/collection/mutable/ListBuffer");
+  jmethodID listAppend = env->GetMethodID(listClass,
+    "$plus$eq", "(Ljava/lang/Object;)Lscala/collection/mutable/ListBuffer;");
+
+  // Get function list
+  FunctionHandle *outArray;
+  mx_uint outSize;
+  int ret = MXListFunctions(&outSize, &outArray);
+  for (int i = 0; i < outSize; ++i) {
+    FunctionHandle fhAddr = outArray[i];
+    jobject fhObj = env->NewObject(fhClass, fhConstructor, (long)fhAddr);
+    env->CallObjectMethod(functions, listAppend, fhObj);
+  }
+  return ret;
+}
+
 // TODO: move to c_api_error.c
 JNIEXPORT jstring JNICALL Java_ml_dmlc_mxnet_LibInfo_mxGetLastError(JNIEnv * env, jobject obj) {
   char *tmpstr = "MXNetError";
