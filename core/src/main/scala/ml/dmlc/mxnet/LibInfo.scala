@@ -28,4 +28,12 @@ class LibInfo {
                             argNames: ListBuffer[String],
                             argTypes: ListBuffer[String],
                             argDescs: ListBuffer[String]): Int
+  @native def mxFuncInvoke(function: FunctionHandle,
+                           // useVars ought to be Array[NDArrayHandle],
+                           // we pass ptr address directly for performance consideration
+                           useVars: Array[CPtrAddress],
+                           scalarArgs: Array[MXFloat],
+                           // mutateVars ought to be Array[NDArrayHandle],
+                           // we pass ptr address directly for performance consideration
+                           mutateVars: Array[CPtrAddress]): Int
 }

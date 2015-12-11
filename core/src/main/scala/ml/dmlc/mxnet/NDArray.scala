@@ -16,6 +16,26 @@ object NDArray {
   def _divScalar(array: NDArray, number: Double, out: NDArray = null): NDArray = ???
   def _rdivScalar(array: NDArray, number: Double, out: NDArray = null): NDArray = ???
 
+  val binaryFunctions: Map[String, NDArrayFunction] = _initNdarrayModule()
+
+  // Definition of internal functions.
+  // Internal binary function
+  def binaryNdarrayFunction(funcName: String, lhs: NDArray, rhs: NDArray, out: NDArray = null): NDArray = {
+    var output: NDArray = out
+    val function = binaryFunctions(funcName)
+    require(function != null, s"invalid function name $funcName")
+    require(output == null || output.writable, "out must be writable")
+    if (output == null) {
+      require(function.acceptEmptyMutate, s"argument out is required to call $funcName")
+      output = new NDArray(_newEmptyHandle())
+    }
+    checkCall(_LIB.mxFuncInvoke(function.handle,
+      Array(lhs.handle.value, rhs.handle.value),
+      Array[MXFloat](),
+      Array(output.handle.value)))
+    output
+  }
+
   /**
     Return a new empty handle.
 
@@ -62,7 +82,7 @@ object NDArray {
   }
 
   // Create a NDArray function from the FunctionHandle.
-  def _makeNdarrayFunction(handle: FunctionHandle): Unit = {
+  def _makeNdarrayFunction(handle: FunctionHandle): NDArrayFunction = {
     val NDARRAY_ARG_BEFORE_SCALAR = 1
     val ACCEPT_EMPTY_MUTATE_TARGET = 1 << 2 // Get the property of NDArray
     val nUsedVars = new MXUintRef
@@ -94,16 +114,26 @@ object NDArray {
     val paramStr = ctypes2docstring(argNames, argTypes, argDescs)
     val docStr = s"${name.value}\n${desc.value}\n\n$paramStr\n"
     println(docStr)
+    // End of function declaration
+    /* TODO
+    if n_mutate_vars == 1 and n_used_vars == 2 and n_scalars == 0:
+      ret_function = binary_ndarray_function
+    elif n_mutate_vars == 1 and n_used_vars == 1 and n_scalars == 0:
+      ret_function = unary_ndarray_function
+    else:
+      ret_function = generic_ndarray_function
+    */
+    new NDArrayFunction(handle, name.value, acceptEmptyMutate)
   }
 
   // List and add all the ndarray functions to current module.
-  def _initNdarrayModule(): Unit = {
+  def _initNdarrayModule(): Map[String, NDArrayFunction] = {
     val functions = ListBuffer[FunctionHandle]()
     checkCall(_LIB.mxListFunctions(functions))
-
-    functions.foreach(hdl => {
+    functions.map(hdl => {
       val function = _makeNdarrayFunction(hdl)
-    })
+      (function.name, function)
+    }).toMap
   }
 
   def main(args: Array[String]): Unit = {
@@ -116,8 +146,9 @@ object NDArray {
     val ndArrayCpu = _newAllocHandle(Vector(2, 1), ctx, false)
     println(ndArrayCpu.value)
 
-    println("Get Ndarray functions: ")
-    _initNdarrayModule()
+    val array1 = new NDArray(_newAllocHandle(Vector(2, 1), ctx, false))
+    val array2 = new NDArray(ndArrayCpu)
+    array1 += array2
   }
 }
 
@@ -131,7 +162,7 @@ class NDArray(val handle: NDArrayHandle, val writable: Boolean = true) {
   }
 
   def +(other: NDArray): NDArray = {
-    NDArray._plus(this, other)
+    NDArray.binaryNdarrayFunction("_plus", this, other)
   }
 
   def +(other: Double): NDArray = {
@@ -142,7 +173,7 @@ class NDArray(val handle: NDArrayHandle, val writable: Boolean = true) {
     if (!writable) {
       throw new IllegalArgumentException("trying to add to a readonly NDArray")
     }
-    NDArray._plus(this, other, out=this)
+    NDArray.binaryNdarrayFunction("_plus", this, other, out=this)
   }
 
   def +=(other: Double): NDArray = {
@@ -277,3 +308,7 @@ class NDArrayConversions[@specialized(Int, Float, Double) V](val value: V) {
     NDArray._rdivScalar(other, value.asInstanceOf[Double])
   }
 }
+
+class NDArrayFunction(val handle: FunctionHandle,
+                      val name: String,
+                      val acceptEmptyMutate: Boolean)

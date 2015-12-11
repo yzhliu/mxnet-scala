@@ -19,9 +19,16 @@ RtcHandle = ctypes.c_void_p
 object Base {
   class RefInt(val value: Int = 0)
   class RefLong(val value: Long = 0)
+  class RefFloat(val value: Float = 0)
   class RefString(val value: String = null)
 
+  // type definitions
+  type MXUint = Int
+  type MXFloat = Float
+  type CPtrAddress = Long
+
   type MXUintRef = RefInt
+  type MXFloatRef = RefFloat
   type NDArrayHandle = RefLong
   type FunctionHandle = RefLong
 

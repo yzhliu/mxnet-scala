@@ -5,8 +5,8 @@
 #include "c_api.h"
 
 JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxNDArrayCreateNone(JNIEnv *env, jobject obj, jobject ndArrayHandle) {
-  NDArrayHandle *out;
-  int ret = MXNDArrayCreateNone(out);
+  NDArrayHandle out;
+  int ret = MXNDArrayCreateNone(&out);
   jclass ndClass = env->GetObjectClass(ndArrayHandle);
   jfieldID ptr = env->GetFieldID(ndClass, "value", "J");
   env->SetLongField(ndArrayHandle, ptr, (long)out);
@@ -21,8 +21,8 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxNDArrayCreate(JNIEnv *env, j
                                                               jint delayAlloc,
                                                               jobject ndArrayHandle) {
   jint *shapeArr = env->GetIntArrayElements(shape, NULL);
-  NDArrayHandle *out;
-  int ret = MXNDArrayCreate((mx_uint *)shapeArr, (mx_uint)ndim, devType, devId, delayAlloc, out);
+  NDArrayHandle out;
+  int ret = MXNDArrayCreate((mx_uint *)shapeArr, (mx_uint)ndim, devType, devId, delayAlloc, &out);
   env->ReleaseIntArrayElements(shape, shapeArr, 0);
   jclass ndClass = env->GetObjectClass(ndArrayHandle);
   jfieldID ptr = env->GetFieldID(ndClass, "value", "J");
@@ -125,6 +125,28 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxFuncGetInfo(JNIEnv *env, job
     env->CallObjectMethod(argDescs, listAppend, env->NewStringUTF(cArgDescs[i]));
   }
 
+  return ret;
+}
+
+JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxFuncInvoke(JNIEnv *env, jobject obj,
+                                                            jobject funcHandle,
+                                                            jlongArray useVars,
+                                                            jfloatArray scalarArgs,
+                                                            jlongArray mutateVars) {
+  jclass refLongClass = env->FindClass("ml/dmlc/mxnet/Base$RefLong");
+  jfieldID refLongFid = env->GetFieldID(refLongClass, "value", "J");
+  jlong funcPtr = env->GetLongField(funcHandle, refLongFid);
+
+  jlong *cUseVars = env->GetLongArrayElements(useVars, NULL);
+  jfloat *cScalarArgs = env->GetFloatArrayElements(scalarArgs, NULL);
+  jlong *cMutateVars = env->GetLongArrayElements(mutateVars, NULL);
+  int ret = MXFuncInvoke((FunctionHandle)funcPtr,
+                         (NDArrayHandle *)cUseVars,
+                         (mx_float *)cScalarArgs,
+                         (NDArrayHandle *)cMutateVars);
+  env->ReleaseLongArrayElements(useVars, cUseVars, 0);
+  env->ReleaseFloatArrayElements(scalarArgs, cScalarArgs, 0);
+  env->ReleaseLongArrayElements(mutateVars, cMutateVars, 0);
   return ret;
 }
 
