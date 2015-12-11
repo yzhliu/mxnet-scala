@@ -27,10 +27,10 @@
     <profile>
       <id>Linux</id>
       <activation>
-          <os>
-              <family>Linux</family>
-              <arch>x64</arch>
-          </os>
+        <os>
+          <family>Linux</family>
+          <arch>x64</arch>
+        </os>
       </activation>
     </profile>
   </profiles>
