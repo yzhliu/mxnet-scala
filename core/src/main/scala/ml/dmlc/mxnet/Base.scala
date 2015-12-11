@@ -53,7 +53,7 @@ object Base {
       argDescs: Seq[String]): String = {
 
     val params =
-      (argNames zip argTypes zip argDescs).map { case ((argName, argType), argDesc) =>
+      (argNames zip argTypes zip argDescs) map { case ((argName, argType), argDesc) =>
         val desc = if (argDesc.isEmpty) "" else s"\n$argDesc"
         s"$argName : $argType$desc"
       }
