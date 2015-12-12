@@ -2,7 +2,7 @@ package ml.dmlc.mxnet
 
 import ml.dmlc.mxnet.Base._
 
-import scala.collection.mutable.ListBuffer
+import scala.collection.mutable.{ArrayBuffer, ListBuffer}
 
 class LibInfo {
   @native def mxNDArrayFree(handle: NDArrayHandle): Int
@@ -36,4 +36,7 @@ class LibInfo {
                            // mutateVars ought to be Array[NDArrayHandle],
                            // we pass ptr address directly for performance consideration
                            mutateVars: Array[CPtrAddress]): Int
+  @native def mxNDArrayGetShape(handle: FunctionHandle,
+                                ndim: MXUintRef,
+                                data: ArrayBuffer[Int]): Int
 }

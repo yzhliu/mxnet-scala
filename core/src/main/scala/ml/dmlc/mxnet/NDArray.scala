@@ -2,7 +2,7 @@ package ml.dmlc.mxnet
 
 import ml.dmlc.mxnet.Base._
 
-import scala.collection.mutable.ListBuffer
+import scala.collection.mutable.{ArrayBuffer, ListBuffer}
 
 object NDArray {
   def _plus(array1: NDArray, array2: NDArray, out: NDArray = null): NDArray = ???
@@ -16,24 +16,84 @@ object NDArray {
   def _divScalar(array: NDArray, number: Double, out: NDArray = null): NDArray = ???
   def _rdivScalar(array: NDArray, number: Double, out: NDArray = null): NDArray = ???
 
-  val binaryFunctions: Map[String, NDArrayFunction] = _initNdarrayModule()
+  val functions: Map[String, NDArrayFunction] = _initNdarrayModule()
 
   // Definition of internal functions.
   // Internal binary function
   def binaryNdarrayFunction(funcName: String, lhs: NDArray, rhs: NDArray, out: NDArray = null): NDArray = {
-    var output: NDArray = out
-    val function = binaryFunctions(funcName)
+    var output = out
+    val function = functions(funcName)
     require(function != null, s"invalid function name $funcName")
     require(output == null || output.writable, "out must be writable")
-    if (output == null) {
-      require(function.acceptEmptyMutate, s"argument out is required to call $funcName")
-      output = new NDArray(_newEmptyHandle())
+    function match {
+      case BinaryNDArrayFunction(handle: NDArrayHandle, acceptEmptyMutate: Boolean) =>
+        if (output == null) {
+          require(acceptEmptyMutate, s"argument out is required to call $funcName")
+          output = new NDArray(_newEmptyHandle())
+        }
+        checkCall(_LIB.mxFuncInvoke(handle,
+          Array(lhs.handle.value, rhs.handle.value),
+          Array[MXFloat](),
+          Array(output.handle.value)))
+      case _ => throw new RuntimeException(s"call $funcName as binary function")
     }
-    checkCall(_LIB.mxFuncInvoke(function.handle,
-      Array(lhs.handle.value, rhs.handle.value),
-      Array[MXFloat](),
-      Array(output.handle.value)))
     output
+  }
+
+  // internal NDArray function
+  def unaryNDArrayFunction(funcName: String, src: NDArray, out: NDArray = null): NDArray = {
+    var output = out
+    val function = functions(funcName)
+    require(function != null, s"invalid function name $funcName")
+    require(output == null || output.writable, "out must be writable")
+    function match {
+      case UnaryNDArrayFunction(handle: NDArrayHandle, acceptEmptyMutate: Boolean) =>
+        if (output == null) {
+          require(acceptEmptyMutate, s"argument out is required to call $funcName")
+          output = new NDArray(_newEmptyHandle())
+        }
+        checkCall(_LIB.mxFuncInvoke(handle,
+          Array(src.handle.value),
+          Array[MXFloat](),
+          Array(output.handle.value)))
+      case _ => throw new RuntimeException(s"call $funcName as unary function")
+    }
+    output
+  }
+
+  /**
+   * Invoke this function by passing in parameters
+   *
+   * @param args Positional arguments of input scalars and NDArray
+   * @param out NDArray or tuple of NDArray, optional
+   *            Output NDArray, used to hold the output result.
+   * @return The result NDArray(tuple) of result of computation.
+   */
+  def genericNDArrayFunction(funcName: String,
+                             args: Array[Any],
+                             out: Array[NDArray] = null): Array[NDArray] = {
+    var mutateVars = out
+    val function = functions(funcName)
+    require(function != null, s"invalid function name $funcName")
+    function match {
+      case GenericNDArrayFunction(handle: FunctionHandle,
+                                  acceptEmptyMutate: Boolean,
+                                  nMutateVars: Int,
+                                  useVarsRange: Range,
+                                  scalarRange: Range) =>
+        require(mutateVars == null || nMutateVars == mutateVars.length,
+          s"expect $nMutateVars in $funcName")
+        if (mutateVars == null) {
+          require(acceptEmptyMutate, s"argument out is required to call $funcName")
+          mutateVars = Array.fill[NDArray](nMutateVars)(new NDArray(_newEmptyHandle()))
+        }
+        checkCall(_LIB.mxFuncInvoke(handle,
+          useVarsRange.map(args(_).asInstanceOf[NDArray].handle.value).toArray,
+          scalarRange.map(args(_).asInstanceOf[MXFloat]).toArray,
+          mutateVars.map(_.handle.value).array))
+      case _ => throw new RuntimeException(s"call $funcName as generic function")
+    }
+    mutateVars
   }
 
   /**
@@ -60,11 +120,11 @@ object NDArray {
     -------
     a new empty ndarray handle
   */
-  def _newAllocHandle(shape: Vector[Int], ctx: Context, delayAlloc: Boolean): NDArrayHandle = {
+  def _newAllocHandle(shape: Array[Int], ctx: Context, delayAlloc: Boolean): NDArrayHandle = {
     val hdl = new NDArrayHandle
     checkCall(_LIB.mxNDArrayCreate(
-      shape.toArray,
-      shape.size,
+      shape,
+      shape.length,
       ctx.deviceTypeid,
       ctx.deviceId,
       if (delayAlloc) 1 else 0,
@@ -82,9 +142,10 @@ object NDArray {
   }
 
   // Create a NDArray function from the FunctionHandle.
-  def _makeNdarrayFunction(handle: FunctionHandle): NDArrayFunction = {
+  def _makeNdarrayFunction(handle: FunctionHandle): (String, NDArrayFunction) = {
     val NDARRAY_ARG_BEFORE_SCALAR = 1
-    val ACCEPT_EMPTY_MUTATE_TARGET = 1 << 2 // Get the property of NDArray
+    val ACCEPT_EMPTY_MUTATE_TARGET = 1 << 2
+    // Get the property of NDArray
     val nUsedVars = new MXUintRef
     val nScalars = new MXUintRef
     val nMutateVars = new MXUintRef
@@ -92,15 +153,13 @@ object NDArray {
     checkCall(_LIB.mxFuncDescribe(handle, nUsedVars, nScalars, nMutateVars, typeMask))
     val acceptEmptyMutate = (typeMask.value & ACCEPT_EMPTY_MUTATE_TARGET) != 0
     // infer type of the function
-    /* TODO
-    if ((typeMask.value & NDARRAY_ARG_BEFORE_SCALAR) != 0) {
-      scalar_range = range(n_used_vars, n_used_vars + n_scalars)
-      use_vars_range = range(0, n_used_vars)
-    } else {
-      scalar_range = range(0, n_scalars)
-      use_vars_range = range(n_scalars, n_used_vars + n_scalars)
-    }
-    */
+    val ndarrayArgBeforeScalar = (typeMask.value & NDARRAY_ARG_BEFORE_SCALAR) != 0
+    val useVarsRange: Range =
+      if (ndarrayArgBeforeScalar) 0 until nUsedVars.value
+      else nScalars.value until (nUsedVars.value + nScalars.value)
+    val scalarRange: Range =
+      if (ndarrayArgBeforeScalar) nUsedVars.value until (nUsedVars.value + nScalars.value)
+      else 0 until nScalars.value
     // Get the information from the function
     val name = new RefString
     val desc = new RefString
@@ -114,26 +173,20 @@ object NDArray {
     val paramStr = ctypes2docstring(argNames, argTypes, argDescs)
     val docStr = s"${name.value}\n${desc.value}\n\n$paramStr\n"
     println(docStr)
-    // End of function declaration
-    /* TODO
-    if n_mutate_vars == 1 and n_used_vars == 2 and n_scalars == 0:
-      ret_function = binary_ndarray_function
-    elif n_mutate_vars == 1 and n_used_vars == 1 and n_scalars == 0:
-      ret_function = unary_ndarray_function
-    else:
-      ret_function = generic_ndarray_function
-    */
-    new NDArrayFunction(handle, name.value, acceptEmptyMutate)
+    if (nMutateVars.value == 1 && nUsedVars.value == 2 && nScalars.value == 0) {
+      (name.value, BinaryNDArrayFunction(handle, acceptEmptyMutate))
+    } else if (nMutateVars.value == 1 && nUsedVars.value == 1 && nScalars.value == 0) {
+      (name.value, UnaryNDArrayFunction(handle, acceptEmptyMutate))
+    } else {
+      (name.value, GenericNDArrayFunction(handle, acceptEmptyMutate, nMutateVars.value, useVarsRange, scalarRange))
+    }
   }
 
   // List and add all the ndarray functions to current module.
   def _initNdarrayModule(): Map[String, NDArrayFunction] = {
     val functions = ListBuffer[FunctionHandle]()
     checkCall(_LIB.mxListFunctions(functions))
-    functions.map(hdl => {
-      val function = _makeNdarrayFunction(hdl)
-      (function.name, function)
-    }).toMap
+    functions.map(_makeNdarrayFunction).toMap
   }
 
   def main(args: Array[String]): Unit = {
@@ -143,12 +196,13 @@ object NDArray {
 
     println("NDArray (cpu) address:")
     val ctx = new Context("cpu", 0)
-    val ndArrayCpu = _newAllocHandle(Vector(2, 1), ctx, false)
+    val ndArrayCpu = _newAllocHandle(Array(2, 1), ctx, false)
     println(ndArrayCpu.value)
 
-    val array1 = new NDArray(_newAllocHandle(Vector(2, 1), ctx, false))
+    val array1 = new NDArray(_newAllocHandle(Array(2, 1), ctx, false))
     val array2 = new NDArray(ndArrayCpu)
     array1 += array2
+    println(s"Shape: ${array1.shape().mkString(",")}")
   }
 }
 
@@ -261,17 +315,19 @@ class NDArray(val handle: NDArrayHandle, val writable: Boolean = true) {
     array : numpy.ndarray
         A copy of array content.
   */
-  def asArray(): Array[Array[Double]] = {
+  def asArray(): Array[Double] = {
+    val matrix = Array.ofDim[Double](3, 4)
     // TODO
-    val (nRows, nCols) = shape()
-    val data = Array.ofDim[Double](nRows, nCols)
+    //val (nRows, nCols) = shape()
+    //val data = Array.ofDim[Double](nRows)
     /* TODO
     checkCall(_LIB.mxNDArraySyncCopyToCPU(
       self.handle,
       data.ctypes.data_as(mx_float_p),
       ctypes.c_size_t(data.size)))
       */
-    data
+    //data
+    Array[Double]()
   }
 
   /**
@@ -281,7 +337,13 @@ class NDArray(val handle: NDArrayHandle, val writable: Boolean = true) {
     -------
     a tuple representing shape of current ndarray
   */
-  def shape(): (Int, Int) = ???
+  def shape(): Array[Int] = {
+    val ndim = new MXUintRef
+    val data = ArrayBuffer[Int]()
+    checkCall(_LIB.mxNDArrayGetShape(handle, ndim, data))
+    require(ndim.value == data.length, s"ndim=$ndim, while len(pdata)=${data.length}")
+    data.toArray
+  }
 }
 
 object NDArrayConversions {
@@ -296,7 +358,6 @@ class NDArrayConversions[@specialized(Int, Float, Double) V](val value: V) {
   }
 
   def -(other: NDArray): NDArray = {
-    other - value.asInstanceOf[Double]
     NDArray._rminusScalar(other, value.asInstanceOf[Double])
   }
 
@@ -309,6 +370,13 @@ class NDArrayConversions[@specialized(Int, Float, Double) V](val value: V) {
   }
 }
 
-class NDArrayFunction(val handle: FunctionHandle,
-                      val name: String,
-                      val acceptEmptyMutate: Boolean)
+sealed class NDArrayFunction
+case class BinaryNDArrayFunction(handle: FunctionHandle,
+                                 acceptEmptyMutate: Boolean) extends NDArrayFunction
+case class UnaryNDArrayFunction(handle: FunctionHandle,
+                                acceptEmptyMutate: Boolean) extends NDArrayFunction
+case class GenericNDArrayFunction(handle: FunctionHandle,
+                                  acceptEmptyMutate: Boolean,
+                                  nMutateVars: Int,
+                                  useVarsRange: Range,
+                                  scalarRange: Range) extends NDArrayFunction
