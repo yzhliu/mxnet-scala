@@ -39,4 +39,7 @@ class LibInfo {
   @native def mxNDArrayGetShape(handle: FunctionHandle,
                                 ndim: MXUintRef,
                                 data: ArrayBuffer[Int]): Int
+  @native def mxNDArraySyncCopyToCPU(handle: FunctionHandle,
+                                     data: Array[MXFloat],
+                                     size: Int): Int
 }

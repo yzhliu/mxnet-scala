@@ -201,8 +201,11 @@ object NDArray {
 
     val array1 = new NDArray(_newAllocHandle(Array(2, 1), ctx, false))
     val array2 = new NDArray(ndArrayCpu)
-    array1 += array2
     println(s"Shape: ${array1.shape().mkString(",")}")
+    println(s"Array1: [${array1.toArray().mkString(",")}]")
+    println(s"Array2: [${array2.toArray().mkString(",")}]")
+    array1 += array2
+    println(s"Array1 after plus: [${array1.toArray().mkString(",")}]")
   }
 }
 
@@ -315,19 +318,11 @@ class NDArray(val handle: NDArrayHandle, val writable: Boolean = true) {
     array : numpy.ndarray
         A copy of array content.
   */
-  def asArray(): Array[Double] = {
-    val matrix = Array.ofDim[Double](3, 4)
-    // TODO
-    //val (nRows, nCols) = shape()
-    //val data = Array.ofDim[Double](nRows)
-    /* TODO
-    checkCall(_LIB.mxNDArraySyncCopyToCPU(
-      self.handle,
-      data.ctypes.data_as(mx_float_p),
-      ctypes.c_size_t(data.size)))
-      */
-    //data
-    Array[Double]()
+  def toArray(): Array[MXFloat] = {
+    val size = shape().product
+    val data = Array.ofDim[MXFloat](size)
+    checkCall(_LIB.mxNDArraySyncCopyToCPU(handle, data, size))
+    data
   }
 
   /**
