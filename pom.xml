@@ -53,6 +53,14 @@
           <executions>
             <execution>
               <id>test</id>
+              <!-- We put it in the integration-test phase,
+                   because the test suites require the jni library,
+                   which means, in order to run the unit tests,
+                   we have to compile all the modules first.
+                   Run in this way:
+                   mvn clean package -P osx-x86_64 && mvn integration-test -P osx-x86_64
+                   This is a temporary solution. -->
+              <phase>integration-test</phase>
               <goals>
                 <goal>test</goal>
               </goals>

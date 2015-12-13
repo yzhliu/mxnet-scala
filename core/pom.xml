@@ -11,6 +11,15 @@
   <version>0.1-SNAPSHOT</version>
   <name>MXNet Scala Package - Core</name>
 
+  <profiles>
+    <profile>
+      <id>osx-x86_64</id>
+      <properties>
+        <platform>osx-x86_64</platform>
+      </properties>
+    </profile>
+  </profiles>
+
   <build>
     <plugins>
       <plugin>
@@ -24,6 +33,9 @@
       <plugin>
         <groupId>org.scalatest</groupId>
         <artifactId>scalatest-maven-plugin</artifactId>
+        <configuration>
+          <argLine>-Djava.library.path=${project.parent.basedir}/native/${platform}/target</argLine> 
+        </configuration>
       </plugin>
     </plugins>
   </build>
