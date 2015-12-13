@@ -1,5 +1,9 @@
 package ml.dmlc.mxnet
 
+object Context {
+  val defaultCtx = new Context("cpu", 0)
+}
+
 /*
   Constructing a context.
 

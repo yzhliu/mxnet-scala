@@ -196,6 +196,20 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxNDArraySyncCopyToCPU(JNIEnv 
   return ret;
 }
 
+JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxNDArraySlice(JNIEnv *env, jobject obj,
+                                                                      jobject ndArrayHandle,
+                                                                      jint start,
+                                                                      jint end,
+                                                                      jobject slicedHandle) {
+  jclass refLongClass = env->FindClass("ml/dmlc/mxnet/Base$RefLong");
+  jfieldID refLongFid = env->GetFieldID(refLongClass, "value", "J");
+  jlong ndArrayPtr = env->GetLongField(ndArrayHandle, refLongFid);
+  NDArrayHandle out;
+  int ret = MXNDArraySlice((NDArrayHandle)ndArrayPtr, start, end, &out);
+  env->SetLongField(slicedHandle, refLongFid, (jlong)out);
+  return ret;
+}
+
 // TODO: move to c_api_error.c
 JNIEXPORT jstring JNICALL Java_ml_dmlc_mxnet_LibInfo_mxGetLastError(JNIEnv * env, jobject obj) {
   char *tmpstr = "MXNetError";

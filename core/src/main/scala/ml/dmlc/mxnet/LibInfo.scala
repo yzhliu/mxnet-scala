@@ -36,10 +36,14 @@ class LibInfo {
                            // mutateVars ought to be Array[NDArrayHandle],
                            // we pass ptr address directly for performance consideration
                            mutateVars: Array[CPtrAddress]): Int
-  @native def mxNDArrayGetShape(handle: FunctionHandle,
+  @native def mxNDArrayGetShape(handle: NDArrayHandle,
                                 ndim: MXUintRef,
                                 data: ArrayBuffer[Int]): Int
-  @native def mxNDArraySyncCopyToCPU(handle: FunctionHandle,
-                                     data: Array[MXFloat],
+  @native def mxNDArraySyncCopyToCPU(handle: NDArrayHandle,
+                                     data: Array[Float],
                                      size: Int): Int
+  @native def mxNDArraySlice(handle: NDArrayHandle,
+                             start: MXUint,
+                             end: MXUint,
+                             sliceHandle: NDArrayHandle): Int
 }
