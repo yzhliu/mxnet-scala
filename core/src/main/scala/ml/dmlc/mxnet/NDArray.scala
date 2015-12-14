@@ -16,11 +16,11 @@ object NDArray {
   def _divScalar(array: NDArray, number: Double, out: NDArray = null): NDArray = ???
   def _rdivScalar(array: NDArray, number: Double, out: NDArray = null): NDArray = ???
 
-  val functions: Map[String, NDArrayFunction] = _initNdarrayModule()
+  private val functions: Map[String, NDArrayFunction] = _initNdarrayModule()
 
   // Definition of internal functions.
   // Internal binary function
-  def binaryNdarrayFunction(funcName: String, lhs: NDArray, rhs: NDArray, out: NDArray = null): NDArray = {
+  private def binaryNdarrayFunction(funcName: String, lhs: NDArray, rhs: NDArray, out: NDArray = null): NDArray = {
     var output = out
     val function = functions(funcName)
     require(function != null, s"invalid function name $funcName")
@@ -41,7 +41,7 @@ object NDArray {
   }
 
   // internal NDArray function
-  def unaryNDArrayFunction(funcName: String, src: NDArray, out: NDArray = null): NDArray = {
+  private def unaryNDArrayFunction(funcName: String, src: NDArray, out: NDArray = null): NDArray = {
     var output = out
     val function = functions(funcName)
     require(function != null, s"invalid function name $funcName")
@@ -69,9 +69,9 @@ object NDArray {
    *            Output NDArray, used to hold the output result.
    * @return The result NDArray(tuple) of result of computation.
    */
-  def genericNDArrayFunction(funcName: String,
-                             args: Array[Any],
-                             out: Array[NDArray] = null): Array[NDArray] = {
+  private def genericNDArrayFunction(funcName: String,
+                                     args: Array[Any],
+                                     out: Array[NDArray] = null): Array[NDArray] = {
     var mutateVars = out
     val function = functions(funcName)
     require(function != null, s"invalid function name $funcName")
@@ -97,30 +97,24 @@ object NDArray {
   }
 
   /**
-    Return a new empty handle.
-
-    Empty handle can be used to hold result
-
-    Returns
-    -------
-    a new empty ndarray handle
-  */
-  def _newEmptyHandle(): NDArrayHandle = {
+   * Return a new empty handle.
+   * Empty handle can be used to hold result
+   *
+   * @return a new empty ndarray handle
+   */
+  private def _newEmptyHandle(): NDArrayHandle = {
     val hdl: NDArrayHandle = new NDArrayHandle
     checkCall(_LIB.mxNDArrayCreateNone(hdl))
     hdl
   }
 
   /**
-    Return a new handle with specified shape and context.
-
-    Empty handle is only used to hold results
-
-    Returns
-    -------
-    a new empty ndarray handle
-  */
-  def _newAllocHandle(shape: Array[Int], ctx: Context, delayAlloc: Boolean): NDArrayHandle = {
+   * Return a new handle with specified shape and context.
+   * Empty handle is only used to hold results
+   *
+   * @return a new empty ndarray handle
+   */
+  private def _newAllocHandle(shape: Array[Int], ctx: Context, delayAlloc: Boolean): NDArrayHandle = {
     val hdl = new NDArrayHandle
     checkCall(_LIB.mxNDArrayCreate(
       shape,
@@ -133,16 +127,15 @@ object NDArray {
   }
 
   /**
-    Wait all async operation to finish in MXNet
-
-    This function is used for benchmark only
-  */
+   * Wait all async operation to finish in MXNet
+   * This function is used for benchmark only
+   */
   def waitall(): Unit = {
     checkCall(_LIB.mxNDArrayWaitAll())
   }
 
   // Create a NDArray function from the FunctionHandle.
-  def _makeNdarrayFunction(handle: FunctionHandle): (String, NDArrayFunction) = {
+  private def _makeNdarrayFunction(handle: FunctionHandle): (String, NDArrayFunction) = {
     val NDARRAY_ARG_BEFORE_SCALAR = 1
     val ACCEPT_EMPTY_MUTATE_TARGET = 1 << 2
     // Get the property of NDArray
@@ -170,9 +163,6 @@ object NDArray {
 
     checkCall(_LIB.mxFuncGetInfo(
       handle, name, desc, numArgs, argNames, argTypes, argDescs))
-    val paramStr = ctypes2docstring(argNames, argTypes, argDescs)
-    val docStr = s"${name.value}\n${desc.value}\n\n$paramStr\n"
-    println(docStr)
     if (nMutateVars.value == 1 && nUsedVars.value == 2 && nScalars.value == 0) {
       (name.value, BinaryNDArrayFunction(handle, acceptEmptyMutate))
     } else if (nMutateVars.value == 1 && nUsedVars.value == 1 && nScalars.value == 0) {
@@ -183,27 +173,19 @@ object NDArray {
   }
 
   // List and add all the ndarray functions to current module.
-  def _initNdarrayModule(): Map[String, NDArrayFunction] = {
+  private def _initNdarrayModule(): Map[String, NDArrayFunction] = {
     val functions = ListBuffer[FunctionHandle]()
     checkCall(_LIB.mxListFunctions(functions))
     functions.map(_makeNdarrayFunction).toMap
   }
 
   /**
-    Create an empty uninitialized new NDArray, with specified shape.
-
-    Parameters
-    ----------
-    shape : tuple
-        shape of the NDArray.
-
-    ctx : Context, optional
-        The context of the NDArray, default to current default context.
-
-    Returns
-    -------
-    out: Array
-        The created NDArray.
+   * Create an empty uninitialized new NDArray, with specified shape.
+   *
+   * @param shape shape of the NDArray.
+   * @param ctx The context of the NDArray, default to current default context.
+   *
+   * @return The created NDArray.
    */
   def empty(shape: Array[Int], ctx: Context=null): NDArray = {
     val context = if (ctx == null) Context.defaultCtx else ctx
@@ -212,46 +194,16 @@ object NDArray {
 
   /**
    * Create a new NDArray filled with 0, with specified shape.
-
-    Parameters
-    ----------
-    shape : tuple
-        shape of the NDArray.
-    ctx : Context, optional.
-        The context of the NDArray, default to current default context.
-
-    Returns
-    -------
-    out: Array
-        The created NDArray.
+   *
+   * @param shape shape of the NDArray.
+   * @param ctx The context of the NDArray, default to current default context.
+   *
+   * @return The created NDArray.
    */
   def zeros(shape: Array[Int], ctx: Context=null): NDArray = {
     val arr = empty(shape, ctx)
     arr(0).set(0f)
     arr
-  }
-
-  def main(args: Array[String]): Unit = {
-    println("NDArray (empty) address:")
-    val ndArrayEmpty: NDArrayHandle = _newEmptyHandle()
-    println(ndArrayEmpty.value)
-
-    println("NDArray (cpu) address:")
-    val ctx = new Context("cpu", 0)
-    val ndArrayCpu = _newAllocHandle(Array(2, 2), ctx, false)
-    println(ndArrayCpu.value)
-
-    val array1 = NDArray.zeros(Array(2, 2))
-    val array2 = NDArray.zeros(Array(2, 2))
-    println(s"Shape: ${array1.shape.mkString(",")}")
-
-    array1(0, 1).set(3f)
-    array2(1, 2).set(5f)
-    println(s"Array1: [${array1.toArray.mkString(",")}]")
-    println(s"Array2: [${array2.toArray.mkString(",")}]")
-
-    array1 += array2
-    println(s"Array1 after plus: [${array1.toArray.mkString(",")}]")
   }
 }
 
@@ -264,32 +216,37 @@ class NDArray(val handle: NDArrayHandle, val writable: Boolean = true) {
     checkCall(_LIB.mxNDArrayFree(handle))
   }
 
-  def _slice(start: Int): NDArray = {
-    _slice(start, shape(0))
-  }
   /**
    * Return a sliced NDArray that shares memory with current one.
    * NDArray only support continuous slicing on axis 0
    *
-   * Parameters
-   * ----------
-   * start : int
-   *     Starting index of slice.
-   * stop : int
-   *     Finishing index of slice.
-  */
-  def _slice(start: Int, stop: Int): NDArray = {
+   * @param start Starting index of slice.
+   * @param stop Finishing index of slice.
+   *
+   * @return a sliced NDArray that shares memory with current one.
+   */
+  private def _slice(start: Int, stop: Int): NDArray = {
     val sliceHandle = new NDArrayHandle()
     checkCall(_LIB.mxNDArraySlice(handle, start, stop, sliceHandle))
     new NDArray(handle = sliceHandle, writable = this.writable)
   }
 
+  private def _slice(start: Int): NDArray = {
+    _slice(start, shape(0))
+  }
+
   def apply(sliceStart: Int): NDArray = _slice(sliceStart)
   def apply(sliceStart: Int, sliceEnd: Int): NDArray = _slice(sliceStart, sliceEnd)
 
-  def set(value: Float) = {
+  /**
+   * Set the values of the NDArray
+   * @param value Value to set
+   * @return Current NDArray
+   */
+  def set(value: Float): NDArray = {
     require(writable, "trying to assign to a readonly NDArray")
     NDArray.genericNDArrayFunction("_set_value", Array[Any](value), out=Array(this))
+    this
   }
 
   def set(other: NDArray) = ???
@@ -387,14 +344,10 @@ class NDArray(val handle: NDArrayHandle, val writable: Boolean = true) {
   }
 
   /**
-    Return a copied numpy array of current array.
-
-    Returns
-    -------
-    array : numpy.ndarray
-        A copy of array content.
-  */
-  /** TODO: Converts this matrix to a flat Array (column-major) */
+   * Return a copied flat java array of current array.
+   * @return  A copy of array content.
+   */
+  // TODO: Shall we use column-major or row-major ?
   def toArray: Array[Float] = {
     val data = Array.ofDim[Float](size)
     checkCall(_LIB.mxNDArraySyncCopyToCPU(handle, data, size))
@@ -402,12 +355,9 @@ class NDArray(val handle: NDArrayHandle, val writable: Boolean = true) {
   }
 
   /**
-    Get shape of current NDArray.
-
-    Returns
-    -------
-    a tuple representing shape of current ndarray
-  */
+   * Get shape of current NDArray.
+   * @return an array representing shape of current ndarray
+   */
   def shape: Array[Int] = {
     val ndim = new MXUintRef
     val data = ArrayBuffer[Int]()

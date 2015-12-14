@@ -4,6 +4,7 @@ import ml.dmlc.mxnet.Base._
 
 import scala.collection.mutable.{ArrayBuffer, ListBuffer}
 
+// JNI functions
 class LibInfo {
   @native def mxNDArrayFree(handle: NDArrayHandle): Int
   @native def mxGetLastError(): String
