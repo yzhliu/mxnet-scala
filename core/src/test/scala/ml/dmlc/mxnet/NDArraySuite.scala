@@ -1,6 +1,7 @@
 package ml.dmlc.mxnet
 
 import org.scalatest.{FunSuite, BeforeAndAfterAll}
+import ml.dmlc.mxnet.NDArrayConversions._
 
 class NDArraySuite extends FunSuite with BeforeAndAfterAll {
   test("to java array") {
@@ -13,6 +14,8 @@ class NDArraySuite extends FunSuite with BeforeAndAfterAll {
     val ndones = ndzeros + 1f
     assert(ndones.toArray === Array(1f, 1f))
     assert((ndones + ndzeros).toArray === Array(1f, 1f))
+    assert((1 + ndones).toArray === Array(2f, 2f))
+    // in-place
     ndones += ndones
     assert(ndones.toArray === Array(2f, 2f))
   }
