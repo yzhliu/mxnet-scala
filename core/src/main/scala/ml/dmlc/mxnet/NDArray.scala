@@ -6,25 +6,15 @@ import org.slf4j.LoggerFactory
 import scala.collection.mutable.{ArrayBuffer, ListBuffer}
 
 object NDArray {
-  private val logger = LoggerFactory.getLogger(classOf[NDArray]);
-
-  def main(s: Array[String]) = {
-    val nd = NDArray.zeros(Array(1, 2))
-    import NDArrayConversions._
-    val nd1 = 1 - nd
-    println(nd1.toArray.mkString(","))
-    println((2 * nd1).toArray.mkString(","))
-    println((3 / (2 * nd1)).toArray.mkString(","))
-  }
-
+  private val logger = LoggerFactory.getLogger(classOf[NDArray])
   private val functions: Map[String, NDArrayFunction] = _initNdarrayModule()
 
   // Definition of internal functions.
   // Internal binary function
-  private[mxnet] def binaryNdarrayFunction(funcName: String,
-                                           lhs: NDArray,
-                                           rhs: NDArray,
-                                           out: NDArray = null): NDArray = {
+  private[mxnet] def _binaryNDArrayFunction(funcName: String,
+                                            lhs: NDArray,
+                                            rhs: NDArray,
+                                            out: NDArray = null): NDArray = {
     var output = out
     val function = functions(funcName)
     require(function != null, s"invalid function name $funcName")
@@ -45,7 +35,7 @@ object NDArray {
   }
 
   // internal NDArray function
-  private[mxnet] def unaryNDArrayFunction(funcName: String, src: NDArray, out: NDArray = null): NDArray = {
+  private[mxnet] def _unaryNDArrayFunction(funcName: String, src: NDArray, out: NDArray = null): NDArray = {
     var output = out
     val function = functions(funcName)
     require(function != null, s"invalid function name $funcName")
@@ -73,9 +63,9 @@ object NDArray {
    *            Output NDArray, used to hold the output result.
    * @return The result NDArray(tuple) of result of computation.
    */
-  private[mxnet] def genericNDArrayFunction(funcName: String,
-                                            args: Array[Any],
-                                            out: Array[NDArray] = null): Array[NDArray] = {
+  private[mxnet] def _genericNDArrayFunction(funcName: String,
+                                             args: Array[Any],
+                                             out: Array[NDArray] = null): Array[NDArray] = {
     var mutateVars = out
     val function = functions(funcName)
     require(function != null, s"invalid function name $funcName")
@@ -187,6 +177,14 @@ object NDArray {
   }
 
   /**
+   * One hot encoding indices into matrix out.
+   * @param indices An NDArray containing indices of the categorical features.
+   * @param out The result holder of the encoding.
+   * @return Same as out.
+   */
+  def onehotEncode(indices: NDArray, out: NDArray): NDArray = ???
+
+  /**
    * Create an empty uninitialized new NDArray, with specified shape.
    *
    * @param shape shape of the NDArray.
@@ -212,6 +210,58 @@ object NDArray {
     arr(0).set(0f)
     arr
   }
+
+  /**
+   * Create a new NDArray filled with 1, with specified shape.
+   * @param shape shape of the NDArray.
+   * @param ctx The context of the NDArray, default to current default context.
+   * @return The created NDArray.
+   */
+  def ones(shape: Array[Int], ctx: Context=null): NDArray = ???
+
+  /**
+   * Create a new NDArray that copies content from source_array.
+   * @param source Source data to create NDArray from.
+   * @param ctx The context of the NDArray, default to current default context.
+   * @return The created NDArray.
+   */
+  def array(source: Array[Float], ctx: Context=null): NDArray = ???
+
+  /**
+   * Load ndarray from binary file.
+   *
+   * You can also use pickle to do the job if you only work on python.
+   * The advantage of load/save is the file is language agnostic.
+   * This means the file saved using save can be loaded by other language binding of mxnet.
+   * You also get the benefit being able to directly load/save from cloud storage(S3, HDFS)
+   *
+   * @param fname
+   *     The name of the file.Can be S3 or HDFS address (remember built with S3 support).
+   *     Example of fname:
+   *     - `s3://my-bucket/path/my-s3-ndarray`
+   *     - `hdfs://my-bucket/path/my-hdfs-ndarray`
+   *     - `/path-to/my-local-ndarray`
+   * @return dict of str->NDArray to be saved
+   */
+  def load(fname: String): Map[String, NDArray] = ???
+
+  /**
+   * Save list of NDArray or dict of str->NDArray to binary file.
+   *
+   * You can also use pickle to do the job if you only work on python.
+   * The advantage of load/save is the file is language agnostic.
+   * This means the file saved using save can be loaded by other language binding of mxnet.
+   * You also get the benefit being able to directly load/save from cloud storage(S3, HDFS)
+   *
+   * @param fname
+   *     The name of the file.Can be S3 or HDFS address (remember built with S3 support).
+   *     Example of fname:
+   *     - `s3://my-bucket/path/my-s3-ndarray`
+   *     - `hdfs://my-bucket/path/my-hdfs-ndarray`
+   *     - `/path-to/my-local-ndarray`
+   * @param data dict of str->NDArray
+   */
+  def save(fname: String, data: Map[String, NDArray]): Unit = ???
 }
 
 /**
@@ -222,6 +272,12 @@ class NDArray(val handle: NDArrayHandle, val writable: Boolean = true) {
   override def finalize() = {
     checkCall(_LIB.mxNDArrayFree(handle))
   }
+
+  /**
+   * Peform an synchronize copy from the array.
+   * @param source The data source we should like to copy from.
+   */
+  def _syncCopyfrom(source: Array[Float]): Unit = ???
 
   /**
    * Return a sliced NDArray that shares memory with current one.
@@ -242,8 +298,22 @@ class NDArray(val handle: NDArrayHandle, val writable: Boolean = true) {
     _slice(start, shape(0))
   }
 
+  /**
+   * Block until all pending writes operations on current NDArray are finished.
+   * This function will return when all the pending writes to the current
+   * NDArray finishes. There can still be pending read going on when the
+   * function returns.
+   */
+  def waitToRead(): Unit = ???
+
   def apply(sliceStart: Int): NDArray = _slice(sliceStart)
   def apply(sliceStart: Int, sliceEnd: Int): NDArray = _slice(sliceStart, sliceEnd)
+
+  /**
+   * Get context of current NDArray.
+   * @return The context of current NDArray.
+   */
+  def context: Context = ???
 
   /**
    * Set the values of the NDArray
@@ -252,105 +322,105 @@ class NDArray(val handle: NDArrayHandle, val writable: Boolean = true) {
    */
   def set(value: Float): NDArray = {
     require(writable, "trying to assign to a readonly NDArray")
-    NDArray.genericNDArrayFunction("_set_value", Array[Any](value), out=Array(this))
+    NDArray._genericNDArrayFunction("_set_value", Array[Any](value), out=Array(this))
     this
   }
 
   def set(other: NDArray) = ???
 
   def +(other: NDArray): NDArray = {
-    NDArray.binaryNdarrayFunction("_plus", this, other)
+    NDArray._binaryNDArrayFunction("_plus", this, other)
   }
 
   def +(other: Float): NDArray = {
-    NDArray.genericNDArrayFunction("_plus_scalar", Array[Any](this, other))(0)
+    NDArray._genericNDArrayFunction("_plus_scalar", Array[Any](this, other))(0)
   }
 
   def +=(other: NDArray): NDArray = {
     if (!writable) {
       throw new IllegalArgumentException("trying to add to a readonly NDArray")
     }
-    NDArray.binaryNdarrayFunction("_plus", this, other, out=this)
+    NDArray._binaryNDArrayFunction("_plus", this, other, out=this)
   }
 
   def +=(other: Float): NDArray = {
     if (!writable) {
       throw new IllegalArgumentException("trying to add to a readonly NDArray")
     }
-    NDArray.genericNDArrayFunction("_plus_scalar", Array[Any](this, other), out=Array(this))
+    NDArray._genericNDArrayFunction("_plus_scalar", Array[Any](this, other), out=Array(this))
     this
   }
 
   def -(other: NDArray): NDArray = {
-    NDArray.binaryNdarrayFunction("_minus", this, other)
+    NDArray._binaryNDArrayFunction("_minus", this, other)
   }
 
   def -(other: Float): NDArray = {
-    NDArray.genericNDArrayFunction("_minus_scalar", Array[Any](this, other))(0)
+    NDArray._genericNDArrayFunction("_minus_scalar", Array[Any](this, other))(0)
   }
 
   def -=(other: NDArray): NDArray = {
     if (!writable) {
       throw new IllegalArgumentException("trying to subtract from a readonly NDArray")
     }
-    NDArray.binaryNdarrayFunction("_minus", this, other, out=this)
+    NDArray._binaryNDArrayFunction("_minus", this, other, out=this)
   }
 
   def -=(other: Float): NDArray = {
     if (!writable) {
       throw new IllegalArgumentException("trying to subtract from a readonly NDArray")
     }
-    NDArray.genericNDArrayFunction("_minus_scalar", Array[Any](this, other), out=Array(this))
+    NDArray._genericNDArrayFunction("_minus_scalar", Array[Any](this, other), out=Array(this))
     this
   }
 
   def *(other: NDArray): NDArray = {
-    NDArray.binaryNdarrayFunction("_mul", this, other)
+    NDArray._binaryNDArrayFunction("_mul", this, other)
   }
 
   def *(other: Float): NDArray = {
-    NDArray.genericNDArrayFunction("_mul_scalar", Array[Any](this, other))(0)
+    NDArray._genericNDArrayFunction("_mul_scalar", Array[Any](this, other))(0)
   }
 
   def unary_-(): NDArray = {
-    NDArray.genericNDArrayFunction("_mul_scalar", Array[Any](this, -1f))(0)
+    NDArray._genericNDArrayFunction("_mul_scalar", Array[Any](this, -1f))(0)
   }
 
   def *=(other: NDArray) = {
     if (!writable) {
       throw new IllegalArgumentException("trying to multiply to a readonly NDArray")
     }
-    NDArray.binaryNdarrayFunction("_mul", this, other, out=this)
+    NDArray._binaryNDArrayFunction("_mul", this, other, out=this)
   }
 
   def *=(other: Float) = {
     if (!writable) {
       throw new IllegalArgumentException("trying to multiply to a readonly NDArray")
     }
-    NDArray.genericNDArrayFunction("_mul_scalar", Array[Any](this, other), out=Array(this))
+    NDArray._genericNDArrayFunction("_mul_scalar", Array[Any](this, other), out=Array(this))
     this
   }
 
   def /(other: NDArray): NDArray = {
-    NDArray.binaryNdarrayFunction("_div", this, other)
+    NDArray._binaryNDArrayFunction("_div", this, other)
   }
 
   def /(other: Float): NDArray = {
-    NDArray.genericNDArrayFunction("_div_scalar", Array[Any](this, other))(0)
+    NDArray._genericNDArrayFunction("_div_scalar", Array[Any](this, other))(0)
   }
 
   def /=(other: NDArray): NDArray = {
     if (!writable) {
       throw new IllegalArgumentException("trying to divide from a readonly NDArray")
     }
-    NDArray.binaryNdarrayFunction("_div", this, other, out=this)
+    NDArray._binaryNDArrayFunction("_div", this, other, out=this)
   }
 
   def /=(other: Float): NDArray = {
     if (!writable) {
       throw new IllegalArgumentException("trying to divide from a readonly NDArray")
     }
-    NDArray.genericNDArrayFunction("_div_scalar", Array[Any](this, other), out=Array(this))
+    NDArray._genericNDArrayFunction("_div_scalar", Array[Any](this, other), out=Array(this))
     this
   }
 
@@ -364,6 +434,30 @@ class NDArray(val handle: NDArrayHandle, val writable: Boolean = true) {
     checkCall(_LIB.mxNDArraySyncCopyToCPU(handle, data, size))
     data
   }
+
+  /**
+   * Return a CPU scalar(float) of current ndarray.
+   * This ndarray must have shape (1,)
+   *
+   * @return The scalar representation of the ndarray.
+   */
+  def toScalar: Float = ???
+
+  /**
+   * Copy the content of current array to other.
+   *
+   * @param other Target NDArray or context we want to copy data to.
+   * @return The copy target NDArray
+   */
+  def copyTo(other: NDArray): NDArray = ???
+
+  /**
+   * Copy the content of current array to a new NDArray in the context.
+   *
+   * @param ctx Target context we want to copy data to.
+   * @return The copy target NDArray
+   */
+  def copyTo(ctx: Context): NDArray = ???
 
   /**
    * Get shape of current NDArray.
@@ -393,7 +487,7 @@ class NDArrayConversions(val value: Float) {
   }
 
   def -(other: NDArray): NDArray = {
-    NDArray.genericNDArrayFunction("_rminus_scalar", Array[Any](other, value))(0)
+    NDArray._genericNDArrayFunction("_rminus_scalar", Array[Any](other, value))(0)
   }
 
   def *(other: NDArray): NDArray = {
@@ -401,7 +495,7 @@ class NDArrayConversions(val value: Float) {
   }
 
   def /(other: NDArray): NDArray = {
-    NDArray.genericNDArrayFunction("_rdiv_scalar", Array[Any](other, value))(0)
+    NDArray._genericNDArrayFunction("_rdiv_scalar", Array[Any](other, value))(0)
   }
 }
 
