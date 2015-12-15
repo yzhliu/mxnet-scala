@@ -1,26 +1,30 @@
 package ml.dmlc.mxnet
 
 import ml.dmlc.mxnet.Base._
+import org.slf4j.LoggerFactory
 
 import scala.collection.mutable.{ArrayBuffer, ListBuffer}
 
 object NDArray {
-  def _plus(array1: NDArray, array2: NDArray, out: NDArray = null): NDArray = ???
-  def _plusScalar(array: NDArray, number: Double, out: NDArray = null): NDArray = ???
-  def _minus(array1: NDArray, array2: NDArray, out: NDArray = null): NDArray = ???
-  def _minusScalar(array: NDArray, number: Double, out: NDArray = null): NDArray = ???
-  def _rminusScalar(array: NDArray, number: Double, out: NDArray = null): NDArray = ???
-  def _mul(array1: NDArray, array2: NDArray, out: NDArray = null): NDArray = ???
-  def _mulScalar(array: NDArray, number: Double, out: NDArray = null): NDArray = ???
-  def _div(array1: NDArray, array2: NDArray, out: NDArray = null): NDArray = ???
-  def _divScalar(array: NDArray, number: Double, out: NDArray = null): NDArray = ???
-  def _rdivScalar(array: NDArray, number: Double, out: NDArray = null): NDArray = ???
+  private val logger = LoggerFactory.getLogger(classOf[NDArray]);
+
+  def main(s: Array[String]) = {
+    val nd = NDArray.zeros(Array(1, 2))
+    import NDArrayConversions._
+    val nd1 = 1 - nd
+    println(nd1.toArray.mkString(","))
+    println((2 * nd1).toArray.mkString(","))
+    println((3 / (2 * nd1)).toArray.mkString(","))
+  }
 
   private val functions: Map[String, NDArrayFunction] = _initNdarrayModule()
 
   // Definition of internal functions.
   // Internal binary function
-  private def binaryNdarrayFunction(funcName: String, lhs: NDArray, rhs: NDArray, out: NDArray = null): NDArray = {
+  private[mxnet] def binaryNdarrayFunction(funcName: String,
+                                           lhs: NDArray,
+                                           rhs: NDArray,
+                                           out: NDArray = null): NDArray = {
     var output = out
     val function = functions(funcName)
     require(function != null, s"invalid function name $funcName")
@@ -41,7 +45,7 @@ object NDArray {
   }
 
   // internal NDArray function
-  private def unaryNDArrayFunction(funcName: String, src: NDArray, out: NDArray = null): NDArray = {
+  private[mxnet] def unaryNDArrayFunction(funcName: String, src: NDArray, out: NDArray = null): NDArray = {
     var output = out
     val function = functions(funcName)
     require(function != null, s"invalid function name $funcName")
@@ -69,9 +73,9 @@ object NDArray {
    *            Output NDArray, used to hold the output result.
    * @return The result NDArray(tuple) of result of computation.
    */
-  private def genericNDArrayFunction(funcName: String,
-                                     args: Array[Any],
-                                     out: Array[NDArray] = null): Array[NDArray] = {
+  private[mxnet] def genericNDArrayFunction(funcName: String,
+                                            args: Array[Any],
+                                            out: Array[NDArray] = null): Array[NDArray] = {
     var mutateVars = out
     val function = functions(funcName)
     require(function != null, s"invalid function name $funcName")
@@ -163,6 +167,9 @@ object NDArray {
 
     checkCall(_LIB.mxFuncGetInfo(
       handle, name, desc, numArgs, argNames, argTypes, argDescs))
+    val paramStr = Base.ctypes2docstring(argNames, argTypes, argDescs)
+    val docStr = s"${name.value}\n${desc.value}\n\n$paramStr\n"
+    logger.debug("NDArray function defination:\n{}", docStr)
     if (nMutateVars.value == 1 && nUsedVars.value == 2 && nScalars.value == 0) {
       (name.value, BinaryNDArrayFunction(handle, acceptEmptyMutate))
     } else if (nMutateVars.value == 1 && nUsedVars.value == 1 && nScalars.value == 0) {
@@ -256,7 +263,7 @@ class NDArray(val handle: NDArrayHandle, val writable: Boolean = true) {
   }
 
   def +(other: Float): NDArray = {
-    NDArray._plusScalar(this, other)
+    NDArray.genericNDArrayFunction("_plus_scalar", Array[Any](this, other))(0)
   }
 
   def +=(other: NDArray): NDArray = {
@@ -270,77 +277,81 @@ class NDArray(val handle: NDArrayHandle, val writable: Boolean = true) {
     if (!writable) {
       throw new IllegalArgumentException("trying to add to a readonly NDArray")
     }
-    NDArray._plusScalar(this, other, out=this)
+    NDArray.genericNDArrayFunction("_plus_scalar", Array[Any](this, other), out=Array(this))
+    this
   }
 
   def -(other: NDArray): NDArray = {
-    NDArray._minus(this, other)
+    NDArray.binaryNdarrayFunction("_minus", this, other)
   }
 
   def -(other: Float): NDArray = {
-    NDArray._minusScalar(this, other)
+    NDArray.genericNDArrayFunction("_minus_scalar", Array[Any](this, other))(0)
   }
 
   def -=(other: NDArray): NDArray = {
     if (!writable) {
       throw new IllegalArgumentException("trying to subtract from a readonly NDArray")
     }
-    NDArray._minus(this, other, out=this)
+    NDArray.binaryNdarrayFunction("_minus", this, other, out=this)
   }
 
   def -=(other: Float): NDArray = {
     if (!writable) {
       throw new IllegalArgumentException("trying to subtract from a readonly NDArray")
     }
-    NDArray._minusScalar(this, other, out=this)
+    NDArray.genericNDArrayFunction("_minus_scalar", Array[Any](this, other), out=Array(this))
+    this
   }
 
-  def *(other: NDArray) = {
-    NDArray._mul(this, other)
+  def *(other: NDArray): NDArray = {
+    NDArray.binaryNdarrayFunction("_mul", this, other)
   }
 
-  def *(other: Float) = {
-    NDArray._mulScalar(this, other)
+  def *(other: Float): NDArray = {
+    NDArray.genericNDArrayFunction("_mul_scalar", Array[Any](this, other))(0)
   }
 
   def unary_-(): NDArray = {
-    NDArray._mulScalar(this, -1.0)
+    NDArray.genericNDArrayFunction("_mul_scalar", Array[Any](this, -1f))(0)
   }
 
   def *=(other: NDArray) = {
     if (!writable) {
       throw new IllegalArgumentException("trying to multiply to a readonly NDArray")
     }
-    NDArray._mul(this, other, out=this)
+    NDArray.binaryNdarrayFunction("_mul", this, other, out=this)
   }
 
   def *=(other: Float) = {
     if (!writable) {
       throw new IllegalArgumentException("trying to multiply to a readonly NDArray")
     }
-    NDArray._mulScalar(this, other, out=this)
+    NDArray.genericNDArrayFunction("_mul_scalar", Array[Any](this, other), out=Array(this))
+    this
   }
 
   def /(other: NDArray): NDArray = {
-    NDArray._div(this, other)
+    NDArray.binaryNdarrayFunction("_div", this, other)
   }
 
   def /(other: Float): NDArray = {
-    NDArray._divScalar(this, other)
+    NDArray.genericNDArrayFunction("_div_scalar", Array[Any](this, other))(0)
   }
 
   def /=(other: NDArray): NDArray = {
     if (!writable) {
       throw new IllegalArgumentException("trying to divide from a readonly NDArray")
     }
-    NDArray._div(this, other, out=this)
+    NDArray.binaryNdarrayFunction("_div", this, other, out=this)
   }
 
   def /=(other: Float): NDArray = {
     if (!writable) {
       throw new IllegalArgumentException("trying to divide from a readonly NDArray")
     }
-    NDArray._divScalar(this, other, out=this)
+    NDArray.genericNDArrayFunction("_div_scalar", Array[Any](this, other), out=Array(this))
+    this
   }
 
   /**
@@ -371,26 +382,26 @@ class NDArray(val handle: NDArrayHandle, val writable: Boolean = true) {
 }
 
 object NDArrayConversions {
-  implicit def int2Scalar(x: Int): NDArrayConversions[Int] = new NDArrayConversions(x)
-  implicit def double2Scalar(x: Double): NDArrayConversions[Double] = new NDArrayConversions(x)
-  implicit def float2Scalar(x: Float): NDArrayConversions[Float] = new NDArrayConversions(x)
+  implicit def int2Scalar(x: Int): NDArrayConversions = new NDArrayConversions(x.toFloat)
+  implicit def double2Scalar(x: Double): NDArrayConversions = new NDArrayConversions(x.toFloat)
+  implicit def float2Scalar(x: Float): NDArrayConversions = new NDArrayConversions(x)
 }
 
-class NDArrayConversions[@specialized(Int, Float, Double) V](val value: V) {
+class NDArrayConversions(val value: Float) {
   def +(other: NDArray): NDArray = {
-    other + value.asInstanceOf[Float]
+    other + value
   }
 
   def -(other: NDArray): NDArray = {
-    NDArray._rminusScalar(other, value.asInstanceOf[Double])
+    NDArray.genericNDArrayFunction("_rminus_scalar", Array[Any](other, value))(0)
   }
 
   def *(other: NDArray): NDArray = {
-    other * value.asInstanceOf[Float]
+    other * value
   }
 
   def /(other: NDArray): NDArray = {
-    NDArray._rdivScalar(other, value.asInstanceOf[Double])
+    NDArray.genericNDArrayFunction("_rdiv_scalar", Array[Any](other, value))(0)
   }
 }
 
