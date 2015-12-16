@@ -4,3 +4,5 @@
 
 # mxnet-scala
 MXNet Scala Package
+
+Moved to https://github.com/terrytangyuan/mxnet
